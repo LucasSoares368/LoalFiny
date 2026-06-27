@@ -82,7 +82,7 @@ function buildWhere(table, filters, userId, params) {
   }
 
   for (const filter of filters || []) {
-    const { column, op, value } = filter;
+    const { column, op, operator, value } = filter;
     assertColumn(table, column);
     if (column === "user_id" && value !== userId) continue;
 
@@ -114,6 +114,18 @@ function buildWhere(table, filters, userId, params) {
       } else {
         clauses.push(`${column} = ?`);
         params.push(value);
+      }
+    } else if (op === "not") {
+      if (operator === "is" && value === null) {
+        clauses.push(`${column} is not null`);
+      } else if (operator === "is" && value === true) {
+        clauses.push(`${column} is not true`);
+      } else if (operator === "is" && value === false) {
+        clauses.push(`${column} is not false`);
+      } else {
+        const err = new Error(`Operador not nao permitido: ${operator}`);
+        err.status = 400;
+        throw err;
       }
     } else {
       const err = new Error(`Operador nao permitido: ${op}`);

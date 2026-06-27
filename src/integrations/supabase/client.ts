@@ -13,7 +13,8 @@ type AuthSession = {
 
 type Filter = {
   column: string;
-  op: "eq" | "neq" | "lt" | "lte" | "gt" | "gte" | "in" | "is";
+  op: "eq" | "neq" | "lt" | "lte" | "gt" | "gte" | "in" | "is" | "not";
+  operator?: string;
   value: unknown;
 };
 
@@ -137,6 +138,11 @@ class QueryBuilder {
 
   is(column: string, value: unknown) {
     this.filters.push({ column, op: "is", value });
+    return this;
+  }
+
+  not(column: string, operator: string, value: unknown) {
+    this.filters.push({ column, op: "not", operator, value });
     return this;
   }
 
