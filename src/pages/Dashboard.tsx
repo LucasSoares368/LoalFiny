@@ -1,609 +1,405 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+  BarChart3,
+  Calendar,
+  Crown,
+  DollarSign,
+  Eye,
+  Landmark,
+  LineChart,
+  PiggyBank,
+  Plus,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  UserRound,
+  Wallet,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Home,
-  Utensils,
-  TrendingUp as Investment,
-  Car,
-  AlertTriangle,
-  Package,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useTransacoes } from "@/hooks/useTransacoes";
-import { useItensMercado } from "@/hooks/useItensMercado";
-import { useVeiculos } from "@/hooks/useVeiculos";
-import { useManutencoesPendentes } from "@/hooks/useManutencoesPendentes";
 import { useProfile } from "@/hooks/useProfile";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 
-// Função para formatar a data corretamente
-const formatarData = (dataString: string) => {
-  if (!dataString) return "";
-  const [ano, mes, dia] = dataString.split("T")[0].split("-");
-  return `${dia}/${mes}/${ano}`;
+type Period = "dia" | "semana" | "mes" | "ano";
+
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+
+const firstDayOfWeek = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - date.getDay());
+  return date.toISOString().slice(0, 10);
 };
 
-// Função para obter a data atual no formato do banco (YYYY-MM-DD)
-const getDataAtual = () => {
-  const now = new Date();
-  const ano = now.getFullYear();
-  const mes = String(now.getMonth() + 1).padStart(2, "0");
-  const dia = String(now.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
+const firstDayOfMonth = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 };
 
-// Função para obter o primeiro dia da semana no formato do banco (YYYY-MM-DD)
-const getPrimeiroDiaSemana = () => {
-  const now = new Date();
-  const primeiroDiaSemana = new Date(now);
-  primeiroDiaSemana.setDate(now.getDate() - now.getDay());
-  return `${primeiroDiaSemana.getFullYear()}-${String(
-    primeiroDiaSemana.getMonth() + 1
-  ).padStart(2, "0")}-${String(primeiroDiaSemana.getDate()).padStart(2, "0")}`;
+const firstDayOfYear = () => `${new Date().getFullYear()}-01-01`;
+
+const getPeriodStart = (period: Period) => {
+  if (period === "dia") return todayKey();
+  if (period === "semana") return firstDayOfWeek();
+  if (period === "ano") return firstDayOfYear();
+  return firstDayOfMonth();
 };
 
-// Função para obter o primeiro dia do mês no formato do banco (YYYY-MM-DD)
-const getPrimeiroDiaMes = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-01`;
-};
+const currentDateLabel = () =>
+  new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(new Date());
 
-// Função para obter o primeiro dia do ano no formato do banco (YYYY-MM-DD)
-const getPrimeiroDiaAno = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-01-01`;
-};
+const currentTimeLabel = () =>
+  new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
 
-// Função para comparar datas no formato do banco (YYYY-MM-DD)
-const compararDatas = (data1: string, data2: string) => {
-  return data1.split("T")[0] === data2;
-};
-
-// Função para formatar o nome do mês
-const formatarMes = (data: Date) => {
-  const meses = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-  ];
-  return `${meses[data.getMonth()]} de ${data.getFullYear()}`;
-};
+const monthLabel = () =>
+  new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date()).replace(/^\w/, (c) => c.toUpperCase());
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [selectedPeriod, setSelectedPeriod] = useState("mês");
-
-  // Usar dados reais dos hooks
+  const [period, setPeriod] = useState<Period>("mes");
   const { transacoes, loading: loadingTransacoes } = useTransacoes();
-  const { itensMercado, loading: loadingItens } = useItensMercado();
-  const { veiculos, loading: loadingVeiculos } = useVeiculos();
+  const { accounts } = useBankAccounts();
   const { profile } = useProfile();
 
-  // Usar apenas um veículo para as manutenções se existir
-  const primeiroVeiculo = veiculos && veiculos.length > 0 ? veiculos[0] : null;
-  // Remover o hook de manutenções pendentes por enquanto até resolver as dependências
+  const data = useMemo(() => {
+    const start = getPeriodStart(period);
+    const filtered = transacoes.filter((item) => item.data.split("T")[0] >= start);
+    const receitas = filtered
+      .filter((item) => item.tipo === "receita")
+      .reduce((sum, item) => sum + Number(item.valor || 0), 0);
+    const despesas = filtered
+      .filter((item) => item.tipo === "despesa")
+      .reduce((sum, item) => sum + Number(item.valor || 0), 0);
+    const saldo = receitas - despesas;
+    const expenseRatio = receitas > 0 ? (despesas / receitas) * 100 : 0;
 
-  // Processar dados com useMemo para performance
-  const processedData = useMemo(() => {
-    if (loadingTransacoes || !transacoes.length) {
-      return {
-        transacoesFiltradas: [],
-        totalReceitas: 0,
-        totalDespesas: 0,
-        saldoPeriodo: 0,
-        percentualDespesas: 0,
-      };
-    }
-
-    const hoje = getDataAtual();
-
-    const transacoesFiltradas = transacoes.filter((transacao) => {
-      const dataTransacao = transacao.data.split("T")[0];
-
-      switch (selectedPeriod) {
-        case "dia":
-          return dataTransacao === hoje;
-        case "semana":
-          return dataTransacao >= getPrimeiroDiaSemana();
-        case "mes":
-          return dataTransacao >= getPrimeiroDiaMes();
-        case "ano":
-          return dataTransacao >= getPrimeiroDiaAno();
-        default:
-          return true;
-      }
-    });
-
-    const totalReceitas = transacoesFiltradas
-      .filter((t) => t.tipo === "receita")
-      .reduce((total, transacao) => total + Number(transacao.valor), 0);
-
-    const totalDespesas = transacoesFiltradas
-      .filter((t) => t.tipo === "despesa")
-      .reduce((total, transacao) => total + Number(transacao.valor), 0);
-
-    const saldoPeriodo = totalReceitas - totalDespesas;
-    const percentualDespesas =
-      totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
+    const categoryTotals = filtered
+      .filter((item) => item.tipo === "despesa")
+      .reduce<Record<string, number>>((acc, item) => {
+        const category = item.categorias?.nome || "Sem categoria";
+        acc[category] = (acc[category] || 0) + Number(item.valor || 0);
+        return acc;
+      }, {});
 
     return {
-      transacoesFiltradas: transacoesFiltradas.sort((a, b) =>
-        b.data.localeCompare(a.data)
-      ),
-      totalReceitas,
-      totalDespesas,
-      saldoPeriodo,
-      percentualDespesas,
+      filtered,
+      receitas,
+      despesas,
+      saldo,
+      expenseRatio,
+      latest: [...filtered].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 4),
+      categoryTotals,
     };
-  }, [transacoes, selectedPeriod, loadingTransacoes]);
+  }, [period, transacoes]);
 
-  const {
-    transacoesFiltradas,
-    totalReceitas,
-    totalDespesas,
-    saldoPeriodo,
-    percentualDespesas,
-  } = processedData;
+  const totalBankBalance = accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
+  const savingsRate = data.receitas > 0 ? Math.max(0, (data.saldo / data.receitas) * 100) : 0;
+  const userName = profile?.name || "Usuário";
 
-  // Função para obter ícone da categoria
-  const obterIconeCategoria = (
-    categoria: string,
-    tipo: "receita" | "despesa"
-  ) => {
-    const icones: {
-      [key: string]: React.ComponentType<{ className?: string }>;
-    } = {
-      "Salário": DollarSign,
-      Freelances: DollarSign,
-      Investimentos: Investment,
-      Moradia: Home,
-      "Alimentação": Utensils,
-      Transporte: Car,
-      default: tipo === "receita" ? DollarSign : TrendingDown,
-    };
-    return icones[categoria] || icones.default;
-  };
-
-  // Função para obter cor da categoria baseada na cor real da categoria
-  const obterCorCategoria = (
-    categoriaObj: { cor?: string } | null | undefined,
-    tipo: "receita" | "despesa"
-  ) => {
-    if (categoriaObj?.cor) {
-      // Converter cor hex para classe Tailwind ou usar a cor diretamente
-      return "bg-primary"; // Usar cor do design system
-    }
-
-    const cores: { [key: string]: string } = {
-      default: tipo === "receita" ? "bg-green-500" : "bg-red-500",
-    };
-    return cores.default;
-  };
-
-  // Cálculos adicionais
-  const despesasPendentes = totalDespesas * 0.1; // Estimativa
-
-  // Itens com estoque baixo (usar nomes corretos das propriedades)
-  const itensEstoqueBaixo = itensMercado.filter(
-    (item) => item.status === "estoque_baixo" || item.status === "sem_estoque"
-  );
-
-  // Preparar transações para exibição (últimas 5)
-  const transacoesParaExibicao = transacoesFiltradas
-    .slice(0, 5)
-    .map((transacao) => ({
-      id: transacao.id,
-      description: transacao.descricao,
-      date: formatarData(transacao.data),
-      category: transacao.categorias?.nome || "Sem categoria",
-      categoryColor: obterCorCategoria(transacao.categorias, transacao.tipo),
-      amount: `${transacao.tipo === "receita" ? "+" : "-"}R$ ${Number(
-        transacao.valor
-      ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-      type: transacao.tipo === "receita" ? "income" : "expense",
-      icon: obterIconeCategoria(
-        transacao.categorias?.nome || "default",
-        transacao.tipo
-      ),
-    }));
-
-  const user = {
-    name: profile?.name || "Usuário",
-    getCurrentPeriod: () => {
-      // Ajusta para o timezone do Brasil (UTC-3)
-      const now = new Date();
-      const offset = -3; // UTC-3 (Brasil)
-      const today = new Date(now.getTime() + offset * 60 * 60 * 1000);
-
-      switch (selectedPeriod) {
-        case "dia": {
-          const dataFormatada = formatarData(today.toISOString());
-          return dataFormatada;
-        }
-        case "semana": {
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay());
-          return `Semana de ${formatarData(startOfWeek.toISOString())}`;
-        }
-        case "mes":
-          return formatarMes(today);
-        case "ano":
-          return today.getFullYear().toString();
-        default:
-          return "Período atual";
-      }
-    },
-  };
-
-  const stats = [
-    {
-      title: "Receitas do período",
-      value: `R$ ${totalReceitas.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`,
-      change: "+12.4%",
-      changeType: "positive",
-      icon: TrendingUp,
-    },
-    {
-      title: "Despesas do período",
-      value: `R$ ${totalDespesas.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`,
-      subtitle: `Pendente: R$ ${despesasPendentes.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`,
-      changeType: "neutral",
-      icon: TrendingDown,
-    },
-    {
-      title: "Saldo do período",
-      value: `R$ ${saldoPeriodo.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`,
-      change: "+29.7%",
-      changeType: "positive",
-      icon: TrendingUp,
-    },
-    {
-      title: "Despesas/Receitas",
-      value: `${percentualDespesas.toFixed(1)}%`,
-      badge: "Saúde Financeira",
-      badgeType:
-        percentualDespesas < 80
-          ? "good"
-          : percentualDespesas < 90
-          ? "warning"
-          : "bad",
-      badgeStatus:
-        percentualDespesas < 80
-          ? "Bom"
-          : percentualDespesas < 90
-          ? "Regular"
-          : "Ruim",
-      changeType: "neutral",
-      icon: percentualDespesas < 80 ? TrendingUp : TrendingDown,
-    },
-  ];
+  const distributionIncome = data.receitas > 0 ? 100 : 50;
+  const distributionExpense = data.despesas > 0 ? 100 : 50;
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 md:mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="bg-orange-500 rounded-full p-2 md:p-3">
-              <span className="text-white font-bold text-lg md:text-xl">
-                {profile?.name ? profile.name.charAt(0).toUpperCase() : "U"}
-              </span>
+      <div className="min-h-screen px-5 py-5 md:px-8">
+        <header className="mb-7 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+            {[
+              ["Libra", "R$ 6.83", "+0.53%"],
+              ["Peso Arg.", "R$ 284.93", "+0.72%"],
+              ["Ibovespa", "128.953", "+0.36%"],
+              ["S&P 500", "5.442", "+0.38%"],
+              ["Bitcoin", "$ 68.325", "+1.32%"],
+            ].map(([label, value, change]) => (
+              <div key={label} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
+                <span className="mr-2 text-[10px] text-slate-400">{label}</span>
+                {value}
+                <span className="ml-2 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-600">{change}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
+            <Button className="h-9 rounded-xl bg-emerald-600 px-5 text-sm font-bold hover:bg-emerald-700">
+              <UserRound className="mr-2 h-4 w-4" />
+              Pessoal
+            </Button>
+            <Button variant="ghost" className="h-9 rounded-xl px-5 text-sm font-bold text-slate-500">
+              <Landmark className="mr-2 h-4 w-4" />
+              Empresarial
+            </Button>
+          </div>
+        </header>
+
+        <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <UserRound className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                Olá, {user.name}
-              </h1>
-              <p className="text-sm md:text-base text-gray-600 dark:text-slate-300">
-                {user.getCurrentPeriod()}
+              <h1 className="text-3xl font-bold tracking-normal text-slate-950">Olá, {userName}! 👋</h1>
+              <p className="text-sm font-medium text-slate-500">
+                Visualizando perfil <span className="font-bold text-emerald-600">Pessoal</span>
               </p>
             </div>
           </div>
-          <div className="w-full sm:w-auto">
-            <Tabs
-              value={selectedPeriod}
-              onValueChange={setSelectedPeriod}
-              className="w-full sm:w-auto"
-            >
-              <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:flex">
-                <TabsTrigger value="dia" className="text-sm">
-                  Dia
-                </TabsTrigger>
-                <TabsTrigger value="semana" className="text-sm">
-                  Semana
-                </TabsTrigger>
-                <TabsTrigger value="mês" className="text-sm">
-                  Mês
-                </TabsTrigger>
-                <TabsTrigger value="ano" className="text-sm">
-                  Ano
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+
+          <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-500">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">
+              <Calendar className="h-4 w-4" />
+              {currentDateLabel()}
+            </span>
+            <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">{currentTimeLabel()}</span>
+            <Eye className="h-4 w-4" />
           </div>
         </div>
 
-        {/* Financial Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="p-4 md:p-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">
-                    {stat.title}
-                  </p>
-                  {stat.icon && (
-                    <stat.icon
-                      className={`w-4 h-4 ${
-                        stat.changeType === "positive"
-                          ? "text-green-600"
-                          : stat.changeType === "negative"
-                          ? "text-red-600"
-                          : "text-gray-600 dark:text-slate-300"
-                      }`}
-                    />
-                  )}
-                </div>
-                <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                  {stat.value}
-                </p>
-                {stat.subtitle && (
-                  <p className="text-xs md:text-sm text-orange-600">
-                    {stat.subtitle}
-                  </p>
-                )}
-                {stat.change && (
-                  <p
-                    className={`text-xs md:text-sm ${
-                      stat.changeType === "positive"
-                        ? "text-green-600"
-                        : stat.changeType === "negative"
-                        ? "text-red-600"
-                        : "text-gray-600 dark:text-slate-300"
-                    }`}
-                  >
-                    {stat.change}
-                  </p>
-                )}
-                {stat.badge && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {stat.badge}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        stat.badgeType === "good"
-                          ? "bg-green-100 text-green-800"
-                          : stat.badgeType === "warning"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full mr-1 ${
-                          stat.badgeType === "good"
-                            ? "bg-green-500"
-                            : stat.badgeType === "warning"
-                            ? "bg-orange-500"
-                            : "bg-red-500"
-                        }`}
-                      ></div>
-                      {stat.badgeStatus}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Recent Transactions */}
-        <Card className="p-4 md:p-6 mb-6 md:mb-8">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-slate-100">
-              Últimas Transações - {selectedPeriod}
-            </h2>
-            <Button
-              variant="ghost"
-              className="text-orange-600 hover:text-orange-700 text-sm"
-              onClick={() => navigate("/transacoes")}
-            >
-              Ver todas
-            </Button>
-          </div>
-          <div className="space-y-3 md:space-y-4">
-            {transacoesParaExibicao.length > 0 ? (
-              transacoesParaExibicao.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-lg border border-gray-100 hover:bg-gray-50 dark:bg-slate-900/40 gap-2 sm:gap-4"
-                >
-                  <div className="flex items-center space-x-3 md:space-x-4">
-                    <div className="p-2 rounded-lg bg-primary/20">
-                      <transaction.icon className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm md:text-base font-medium text-gray-900 dark:text-slate-100">
-                        {transaction.description}
-                      </p>
-                      <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">
-                        {transaction.date}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-3 md:space-x-4">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                      {transaction.category}
-                    </span>
-                    <span
-                      className={`text-sm md:text-base font-bold ${
-                        transaction.type === "income"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {transaction.amount}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-gray-500 dark:text-slate-400">
-                Nenhuma transação encontrada para o período selecionado.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Alert Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-          {/* Estoque Baixo Card */}
-          <Card className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-red-100 rounded-full p-2 md:p-3">
-                  <Package className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-slate-100">
-                    Estoque Baixo
-                  </h3>
-                  <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">
-                    {itensEstoqueBaixo.length} item
-                    {itensEstoqueBaixo.length !== 1 ? "s" : ""} precisa
-                    {itensEstoqueBaixo.length === 1 ? "" : "m"} de atenção
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                className="text-orange-600 hover:text-orange-700 text-sm"
-                onClick={() => navigate("/mercado")}
-              >
-                Ver todos
-              </Button>
+        <section className="mb-5 rounded-3xl border border-emerald-400 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white">
+              <Wallet className="h-7 w-7" />
             </div>
-            <div className="space-y-3">
-              {itensEstoqueBaixo.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-100"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        item.status === "sem_estoque"
-                          ? "bg-red-600"
-                          : "bg-yellow-500"
-                      }`}
-                    ></div>
-                    <div>
-                      <p className="text-xs md:text-sm font-medium text-gray-900 dark:text-slate-100">
-                        {item.descricao}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-slate-300">
-                        {item.quantidade_atual}/{item.quantidade_ideal}{" "}
-                        {item.unidade_medida}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      item.status === "sem_estoque"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {item.status === "sem_estoque"
-                      ? "Sem estoque"
-                      : "Estoque baixo"}
-                  </span>
-                </div>
-              ))}
+            <div>
+              <p className="text-2xl font-bold text-slate-950">Saldo disponível</p>
+              <p className="text-sm font-medium text-slate-500">
+                Soma de {accounts.length} conta{accounts.length === 1 ? "" : "s"} pessoa{accounts.length === 1 ? "l" : "is"}
+              </p>
+              <p className="mt-5 text-5xl font-bold text-emerald-600">{formatCurrency(totalBankBalance)}</p>
+              <p className="mt-2 text-sm text-slate-500">
+                {accounts.length ? "Saldo consolidado das contas cadastradas." : "Cadastre seus bancos para ver o saldo consolidado."}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="mb-5 grid gap-4 md:grid-cols-3">
+          <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="emerald" />
+          <MiniMetric title="Despesas pessoal" value={data.despesas} icon={TrendingDown} tone="red" />
+          <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="sky" />
+        </div>
+
+        <div className="mb-5 grid gap-5 lg:grid-cols-3">
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={BarChart3} title="Distribuição financeira" subtitle="Comparativo entre perfil pessoal e empresarial" />
+            <Distribution label="Distribuição de receitas" value={distributionIncome} amount={data.receitas} />
+            <Distribution label="Distribuição de despesas" value={distributionExpense} amount={data.despesas} danger />
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={Landmark} title="Meus bancos" subtitle="Cadastre seus bancos para ter uma visão unificada" />
+            <div className="mt-6 flex justify-center">
+              <Button className="rounded-full bg-emerald-600 px-6 font-bold hover:bg-emerald-700" onClick={() => navigate("/carteira")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Cadastrar banco
+              </Button>
             </div>
           </Card>
 
+          <Card className="rounded-2xl border-emerald-100 bg-white p-6 shadow-sm">
+            <SectionTitle icon={Target} title="Reserva de emergência" subtitle="Configure seus custos fixos" />
+            <p className="my-9 text-sm text-slate-500">Cadastre seus custos fixos para calcular a meta.</p>
+            <Button variant="outline" className="h-11 w-full rounded-2xl font-bold" onClick={() => navigate("/metas")}>
+              Configurar
+            </Button>
+          </Card>
         </div>
 
-        {/* Veículos Card */}
-        <Card className="p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center">
-              <Car className="w-4 h-4 md:w-5 md:h-5 mr-2 text-orange-500" />
-              Meus Veículos
-            </h2>
-            <Button
-              variant="ghost"
-              className="text-orange-600 hover:text-orange-700 text-sm"
-              onClick={() => navigate("/veiculos")}
-            >
-              Ver todos
-            </Button>
+        <Card className="mb-5 rounded-2xl border-slate-700/40 bg-white p-6 shadow-sm">
+          <SectionTitle icon={Wallet} title="Visão consolidada" subtitle="Pessoal + empresarial no mês atual" />
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <SummaryPill label="Receitas" value={data.receitas} tone="emerald" />
+            <SummaryPill label="Despesas" value={data.despesas} tone="red" />
+            <SummaryPill label="Saldo" value={data.saldo} tone="emerald" />
           </div>
-          <div className="space-y-3 md:space-y-4">
-            {loadingVeiculos ? (
-              <div className="text-center py-4 text-sm md:text-base text-gray-500 dark:text-slate-400">
-                Carregando veículos...
-              </div>
-            ) : veiculos.length > 0 ? (
-              veiculos.map((veiculo) => (
-                <div
-                  key={veiculo.id}
-                  className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-gray-100 hover:bg-gray-50 dark:bg-slate-900/40"
-                >
-                  <div className="flex items-center space-x-3 md:space-x-4">
-                    <div className="p-2 rounded-lg bg-orange-500 bg-opacity-20">
-                      <Car className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm md:text-base font-medium text-gray-900 dark:text-slate-100">
-                        {veiculo.marca} {veiculo.modelo}
-                      </p>
-                      <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">
-                        {veiculo.ano} • {veiculo.quilometragem.toLocaleString()}{" "}
-                        km
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 md:py-8 text-sm md:text-base text-gray-500 dark:text-slate-400">
-                Nenhum veículo cadastrado ainda.
-              </div>
-            )}
+          <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+            <div>
+              <p className="font-bold text-slate-500">Taxa de poupança</p>
+              <p className="text-xs text-slate-500">
+                {savingsRate > 0 ? "Você guardou parte do que recebeu." : "Atenção: margem de poupança baixa."}
+              </p>
+            </div>
+            <span className="font-bold text-red-500">{savingsRate.toFixed(1)}%</span>
           </div>
         </Card>
+
+        <Card className="mb-5 rounded-2xl border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+          <div className="flex gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <Crown className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">Indicadores inteligentes</h2>
+              <p className="text-sm text-slate-500">Receba insights personalizados sobre sua saúde financeira com análise automática dos seus dados.</p>
+              <ul className="mt-3 space-y-1 text-sm font-medium text-slate-500">
+                <li>Nível de proteção financeira</li>
+                <li>Variação de gastos mensais</li>
+                <li>Dependência de renda variável</li>
+                <li>Análise automática e personalizada</li>
+              </ul>
+              <Button className="mt-4 rounded-full bg-emerald-600 px-6 font-bold hover:bg-emerald-700">
+                Fazer upgrade para Pro
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={Calendar} title={`Resumo de ${monthLabel()}`} subtitle="Comparativo com o mês anterior" />
+            <div className="mt-5 space-y-4">
+              <SummaryRow label="Receitas" value={data.receitas} tone="emerald" />
+              <SummaryRow label="Despesas" value={data.despesas} tone="red" />
+              <SummaryRow label="Saldo do mês" value={data.saldo} tone="emerald" />
+            </div>
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="font-bold text-slate-500">Taxa de economia</p>
+                <p className="text-xs text-slate-500">Você gastou exatamente o que ganhou</p>
+              </div>
+              <span className="text-2xl font-bold text-slate-500">{savingsRate.toFixed(0)}%</span>
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={LineChart} title="Fluxo de caixa mensal" subtitle="Evolução de receitas e despesas nos últimos meses" />
+            <SimpleChart receitas={data.receitas} despesas={data.despesas} />
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={TrendingUp} title="Evolução do saldo" subtitle="Acompanhe como seu saldo evolui ao longo do tempo" />
+            <EmptyState text={loadingTransacoes ? "Carregando transações..." : "Nenhuma transação registrada ainda"} />
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+            <SectionTitle icon={BarChart3} title="Despesas por categoria" subtitle="Distribuição dos seus gastos pessoais" />
+            {Object.keys(data.categoryTotals).length ? (
+              <div className="mt-6 space-y-3">
+                {Object.entries(data.categoryTotals).map(([category, value]) => (
+                  <div key={category}>
+                    <div className="mb-1 flex justify-between text-sm font-semibold text-slate-600">
+                      <span>{category}</span>
+                      <span>{formatCurrency(value)}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100">
+                      <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (value / Math.max(data.despesas, 1)) * 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState text="Nenhuma despesa pessoal registrada ainda" />
+            )}
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
 };
 
+const SectionTitle = ({ icon: Icon, title, subtitle }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle: string }) => (
+  <div>
+    <h2 className="flex items-center gap-2 text-xl font-bold text-slate-950">
+      <Icon className="h-5 w-5 text-emerald-600" />
+      {title}
+    </h2>
+    <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+  </div>
+);
+
+const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: number; icon: React.ComponentType<{ className?: string }>; tone: "emerald" | "red" | "sky" }) => {
+  const colors = {
+    emerald: "border-l-emerald-500 bg-emerald-50 text-emerald-600",
+    red: "border-l-red-500 bg-red-50 text-red-500",
+    sky: "border-l-sky-500 bg-sky-50 text-sky-500",
+  };
+  return (
+    <Card className={`rounded-2xl border-l-4 border-slate-200 p-5 shadow-sm ${colors[tone]}`}>
+      <p className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+        <Icon className="h-4 w-4" />
+        {title}
+      </p>
+      <p className="mt-3 text-2xl font-bold">{formatCurrency(value)}</p>
+    </Card>
+  );
+};
+
+const Distribution = ({ label, value, amount, danger = false }: { label: string; value: number; amount: number; danger?: boolean }) => (
+  <div className="mt-5">
+    <p className={`mb-2 text-sm font-semibold ${danger ? "text-red-500" : "text-emerald-600"}`}>{label}</p>
+    <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">
+      <div className="bg-emerald-500 text-center text-[10px] font-bold text-white" style={{ width: `${value / 2}%` }}>
+        50%
+      </div>
+      <div className="bg-sky-500 text-center text-[10px] font-bold text-white" style={{ width: `${100 - value / 2}%` }}>
+        50%
+      </div>
+    </div>
+    <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
+      <span>Pessoal: {formatCurrency(amount)}</span>
+      <span>Empresarial: {formatCurrency(0)}</span>
+    </div>
+  </div>
+);
+
+const SummaryPill = ({ label, value, tone }: { label: string; value: number; tone: "emerald" | "red" }) => (
+  <div className={`rounded-2xl p-4 text-center ${tone === "red" ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600"}`}>
+    <p className="text-[11px] font-bold uppercase tracking-wide">{label}</p>
+    <p className="mt-1 font-bold">{formatCurrency(value)}</p>
+  </div>
+);
+
+const SummaryRow = ({ label, value, tone }: { label: string; value: number; tone: "emerald" | "red" }) => (
+  <div className={`flex items-center justify-between rounded-2xl border p-4 ${tone === "red" ? "border-red-100 bg-red-50 text-red-500" : "border-emerald-100 bg-emerald-50 text-emerald-600"}`}>
+    <div>
+      <p className="text-sm font-semibold text-slate-500">{label}</p>
+      <p className="text-xl font-bold">{formatCurrency(value)}</p>
+    </div>
+    <span className="text-sm font-bold text-slate-500">0.0%</span>
+  </div>
+);
+
+const SimpleChart = ({ receitas, despesas }: { receitas: number; despesas: number }) => {
+  const max = Math.max(receitas, despesas, 1);
+  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"];
+  return (
+    <div className="mt-8 h-64">
+      <div className="flex h-52 items-end gap-5 border-b border-l border-slate-200 px-5">
+        {months.map((month, index) => {
+          const receitaHeight = index === months.length - 1 ? (receitas / max) * 150 : 8;
+          const despesaHeight = index === months.length - 1 ? (despesas / max) * 150 : 8;
+          return (
+            <div key={month} className="flex flex-1 flex-col items-center justify-end gap-2">
+              <div className="flex items-end gap-1">
+                <span className="w-3 rounded-t bg-emerald-500" style={{ height: `${Math.max(8, receitaHeight)}px` }} />
+                <span className="w-3 rounded-t bg-red-500" style={{ height: `${Math.max(8, despesaHeight)}px` }} />
+              </div>
+              <span className="text-xs text-slate-500">{month}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex justify-center gap-5 text-sm font-bold">
+        <span className="text-emerald-600">■ Receitas</span>
+        <span className="text-red-500">■ Despesas</span>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ text }: { text: string }) => (
+  <div className="flex min-h-64 items-center justify-center text-center text-sm font-medium text-slate-400">{text}</div>
+);
+
 export default Dashboard;
-
-
-

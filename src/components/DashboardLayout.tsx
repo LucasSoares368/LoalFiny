@@ -1,27 +1,29 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
-  Home,
-  TrendingUp,
-  TrendingDown,
-  FileText,
   BarChart3,
-  Tag,
-  Wallet,
-  Target,
-  Users,
   Bot,
-  ShoppingCart,
+  Calculator,
   Car,
+  CreditCard,
+  FileText,
+  Home,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
   Menu,
-  X,
-  Sun,
   Moon,
+  PiggyBank,
+  Shield,
+  ShoppingCart,
+  Sun,
+  Tag,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  UserCircle,
+  Wallet,
+  X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,28 +31,55 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+const menuGroups = [
+  {
+    label: "Principal",
+    items: [
+      { icon: Home, label: "Dashboard", path: "/dashboard" },
+      { icon: Wallet, label: "Bancos", path: "/carteira" },
+      { icon: FileText, label: "Transações", path: "/transacoes" },
+      { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
+    ],
+  },
+  {
+    label: "Planejamento",
+    items: [
+      { icon: CreditCard, label: "Receitas", path: "/receitas" },
+      { icon: TrendingDown, label: "Despesas", path: "/despesas" },
+      { icon: Target, label: "Metas", path: "/metas" },
+      { icon: PiggyBank, label: "Reserva", path: "/metas" },
+    ],
+  },
+  {
+    label: "Operações",
+    items: [
+      { icon: Tag, label: "Categorias", path: "/categorias" },
+      { icon: ShoppingCart, label: "Mercado", path: "/mercado" },
+      { icon: Car, label: "Veículos", path: "/veiculos" },
+      { icon: Bot, label: "IA", path: "/ia" },
+    ],
+  },
+];
+
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const menuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: Wallet, label: "Carteira", path: "/carteira" },
-    { icon: TrendingUp, label: "Receitas", path: "/receitas" },
-    { icon: TrendingDown, label: "Despesas", path: "/despesas" },
-    { icon: FileText, label: "Transações", path: "/transacoes" },
-    { icon: Tag, label: "Categorias", path: "/categorias" },
-    { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
-    { icon: Target, label: "Metas", path: "/metas" },
-    { icon: ShoppingCart, label: "Mercado", path: "/mercado" },
-    { icon: Car, label: "Veículos", path: "/veiculos" },
-    { icon: Users, label: "Perfil", path: "/perfil" },
-    { icon: Bot, label: "IA", path: "/ia" },
-  ];
+  useEffect(() => {
+    setIsDarkMode(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const toggleTheme = () => {
+    const nextDarkMode = !isDarkMode;
+    setIsDarkMode(nextDarkMode);
+    document.documentElement.classList.toggle("dark", nextDarkMode);
+    localStorage.setItem("theme", nextDarkMode ? "dark" : "light");
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -66,167 +95,116 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     navigate("/");
   };
 
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  useEffect(() => {
-    setIsDarkMode(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggleTheme = () => {
-    const nextDarkMode = !isDarkMode;
-    setIsDarkMode(nextDarkMode);
-
-    if (nextDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background flex relative">
-      {!isMobileMenuOpen && (
-        <div className="lg:hidden fixed top-4 left-4 z-50">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 bg-card shadow-md rounded-full hover:bg-muted transition-colors"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
-
-      {isMobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={closeMobileMenu}
-        ></div>
-      )}
-
-      <div
-        className={`
-          fixed top-0 left-0 h-screen
-          ${
-            isMobileMenuOpen
-              ? "translate-x-0"
-              : "-translate-x-full lg:translate-x-0"
-          }
-          transition-all duration-300
-          bg-card border-r border-border flex flex-col
-          z-40
-          ${isCollapsed ? "w-20" : "w-64"}
-        `}
-      >
-        <div className="p-6 border-b border-border flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img src="/brand/icon.png" alt="LocalFiny" className="h-10 w-10 rounded-lg object-contain" />
-              {!isCollapsed && (
-                <span className="text-xl font-bold text-foreground">LocalFiny</span>
-              )}
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-8 w-8 hover:bg-muted transition-colors"
-              onClick={closeMobileMenu}
-            >
-              <X className="h-5 w-5 text-foreground" />
-            </Button>
-          </div>
-        </div>
-
+    <div className="min-h-screen bg-[#f5f7fb] text-slate-950">
+      {!isMobileMenuOpen ? (
         <Button
           variant="ghost"
           size="icon"
-          className={`
-            hidden lg:flex absolute top-6 -right-3
-            h-6 w-6 rounded-full bg-card border border-border
-            hover:bg-muted
-            transition-all duration-200 shadow-sm
-            items-center justify-center
-          `}
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="fixed left-4 top-4 z-50 h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm lg:hidden"
+          onClick={() => setIsMobileMenuOpen(true)}
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-3 w-3 text-foreground" />
-          ) : (
-            <ChevronLeft className="h-3 w-3 text-foreground" />
-          )}
+          <Menu className="h-5 w-5" />
         </Button>
+      ) : null}
 
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-1">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={closeMobileMenu}
-                className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname === item.path
-                    ? "bg-orange-100 text-orange-600"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                } ${isCollapsed ? "justify-center" : "space-x-3"}`}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
+      {isMobileMenuOpen ? (
+        <div className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden" onClick={closeMobileMenu} />
+      ) : null}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white/95 shadow-sm backdrop-blur transition-transform duration-300 lg:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
+          <Link to="/dashboard" className="flex items-center gap-3" onClick={closeMobileMenu}>
+            <img src="/brand/icon.png" alt="LocalFiny" className="h-9 w-9 rounded-xl object-contain" />
+            <span className="text-lg font-bold text-emerald-600">LocalFiny</span>
+          </Link>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={closeMobileMenu}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-5">
+          <div className="space-y-7">
+            {menuGroups.map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const active = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={`${group.label}-${item.label}`}
+                        to={item.path}
+                        onClick={closeMobileMenu}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                          active
+                            ? "bg-emerald-50 text-emerald-700 shadow-[inset_3px_0_0_#10b981]"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
           </div>
         </nav>
 
-        <div className="p-4 border-t border-border flex-shrink-0 space-y-2">
-          <Button
-            variant="ghost"
-            className={`w-full text-muted-foreground hover:text-foreground hover:bg-muted ${
-              isCollapsed ? "justify-center px-0" : "justify-start"
-            }`}
-            onClick={toggleTheme}
-            title={isCollapsed ? "Alternar tema" : undefined}
-          >
-            {isDarkMode ? (
-              <Sun className="w-5 h-5 flex-shrink-0" />
-            ) : (
-              <Moon className="w-5 h-5 flex-shrink-0" />
-            )}
-            {!isCollapsed && (
-              <span className="ml-3">{isDarkMode ? "Modo claro" : "Modo escuro"}</span>
-            )}
-          </Button>
+        <div className="border-t border-slate-200 p-4">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Aparência</p>
+            <Button
+              variant="ghost"
+              className="h-10 w-full justify-start gap-3 rounded-xl text-slate-600 hover:bg-white"
+              onClick={toggleTheme}
+            >
+              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {isDarkMode ? "Modo claro" : "Modo escuro"}
+            </Button>
+          </div>
 
+          <Link
+            to="/perfil"
+            onClick={closeMobileMenu}
+            className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <UserCircle className="h-4 w-4 text-emerald-600" />
+            Meu perfil
+          </Link>
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-500">
+            <button className="flex items-center gap-1 rounded-lg px-2 py-2 hover:bg-slate-50">
+              <Calculator className="h-3.5 w-3.5" />
+              Calculadora
+            </button>
+            <button className="flex items-center gap-1 rounded-lg px-2 py-2 hover:bg-slate-50">
+              <Shield className="h-3.5 w-3.5" />
+              Privacidade
+            </button>
+          </div>
           <Button
             variant="ghost"
-            className={`w-full text-muted-foreground hover:text-foreground hover:bg-muted ${
-              isCollapsed ? "justify-center px-0" : "justify-start"
-            }`}
+            className="mt-3 h-10 w-full justify-start gap-3 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600"
             onClick={() => {
               handleLogout();
               closeMobileMenu();
             }}
-            title={isCollapsed ? "Sair" : undefined}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!isCollapsed && <span className="ml-3">Sair</span>}
+            <LogOut className="h-4 w-4" />
+            Sair da conta
           </Button>
         </div>
-      </div>
+      </aside>
 
-      <div
-        className={`flex-1 ${
-          isCollapsed ? "lg:ml-20" : "lg:ml-64"
-        } transition-all duration-300`}
-      >
-        <div className="lg:hidden h-16"></div>{" "}
-        {children}
-      </div>
+      <main className="min-h-screen lg:pl-64">{children}</main>
     </div>
   );
 };
