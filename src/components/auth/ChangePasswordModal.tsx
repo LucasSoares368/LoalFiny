@@ -142,7 +142,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
             </Button>
             <Button
               type="submit"
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#FF6A00] hover:bg-[#e85f00]"
               disabled={isLoading}
             >
               {isLoading ? "Alterando..." : "Alterar Senha"}

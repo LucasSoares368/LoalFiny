@@ -70,7 +70,7 @@ export const ResetPasswordForm = ({ onSwitchToLogin }: ResetPasswordFormProps) =
   };
 
   const inputClass =
-    "h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 pr-12 text-base focus-visible:ring-orange-500";
+    "h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 pr-12 text-base focus-visible:ring-[#FF6A00]";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -136,7 +136,7 @@ export const ResetPasswordForm = ({ onSwitchToLogin }: ResetPasswordFormProps) =
 
       <Button
         type="submit"
-        className="h-12 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 text-base font-bold shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-orange-700"
+        className="h-12 w-full rounded-2xl bg-gradient-to-r from-[#FF6A00] to-[#e85f00] text-base font-bold shadow-lg shadow-[#FF6A00]/20 hover:from-[#e85f00] hover:to-[#cc5500]"
         disabled={isLoading}
       >
         {isLoading ? "Alterando senha..." : "Alterar senha"}
@@ -146,7 +146,7 @@ export const ResetPasswordForm = ({ onSwitchToLogin }: ResetPasswordFormProps) =
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="text-sm font-semibold text-orange-600 hover:text-orange-500"
+          className="text-sm font-semibold text-[#FF6A00] hover:text-[#FF6A00]"
         >
           Voltar para o login
         </button>

@@ -120,7 +120,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
           <Link to="/dashboard" className="flex items-center gap-3" onClick={closeMobileMenu}>
             <img src="/brand/icon.png" alt="LocalFiny" className="h-9 w-9 rounded-xl object-contain" />
-            <span className="text-lg font-bold text-emerald-600">LocalFiny</span>
+            <span className="text-lg font-bold text-[#FF6A00]">LocalFiny</span>
           </Link>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={closeMobileMenu}>
             <X className="h-5 w-5" />
@@ -144,7 +144,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         onClick={closeMobileMenu}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                           active
-                            ? "bg-emerald-50 text-emerald-700 shadow-[inset_3px_0_0_#10b981]"
+                            ? "bg-[#FF6A00]/10 text-[#0D1B2A] shadow-[inset_3px_0_0_#FF6A00]"
                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                         }`}
                       >
@@ -177,7 +177,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             onClick={closeMobileMenu}
             className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            <UserCircle className="h-4 w-4 text-emerald-600" />
+            <UserCircle className="h-4 w-4 text-[#FF6A00]" />
             Meu perfil
           </Link>
           <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-500">

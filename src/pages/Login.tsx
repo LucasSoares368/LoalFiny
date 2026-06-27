@@ -40,7 +40,7 @@ const Login = () => {
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <div className="grid min-h-screen lg:grid-cols-[0.95fr_1.05fr]">
         <section className="relative hidden overflow-hidden bg-[#041d36] text-white lg:flex">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(249,115,22,0.38),transparent_28%),linear-gradient(145deg,#061a33_0%,#083055_48%,#f97316_135%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(255,106,0,0.38),transparent_28%),linear-gradient(145deg,#0D1B2A_0%,#10263b_52%,#FF6A00_135%)]" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/25 to-transparent" />
 
           <div className="relative flex w-full flex-col justify-between px-16 py-14">
@@ -137,7 +137,7 @@ const Login = () => {
             </div>
 
             <div className="mt-8 text-center">
-              <Link to="/" className="text-sm font-semibold text-slate-500 transition hover:text-orange-600">
+              <Link to="/" className="text-sm font-semibold text-slate-500 transition hover:text-[#FF6A00]">
                 Voltar para a página inicial
               </Link>
             </div>

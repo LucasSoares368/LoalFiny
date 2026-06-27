@@ -55,7 +55,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Como gostaria de ser chamado?"
-          className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 text-base focus-visible:ring-orange-500"
+          className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 text-base focus-visible:ring-[#FF6A00]"
           required
         />
       </div>
@@ -70,7 +70,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="seu@email.com"
-          className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 text-base focus-visible:ring-orange-500"
+          className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 text-base focus-visible:ring-[#FF6A00]"
           required
         />
       </div>
@@ -86,7 +86,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Digite uma senha segura"
-            className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 pr-12 text-base focus-visible:ring-orange-500"
+            className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 pr-12 text-base focus-visible:ring-[#FF6A00]"
             required
           />
           <Button
@@ -109,12 +109,12 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
             <span className="text-slate-500">
               Força da senha: {isPasswordStrong ? "Forte" : passwordScore >= 3 ? "Média" : "Fraca"}
             </span>
-            <span className={isPasswordStrong ? "text-emerald-600" : "text-orange-600"}>{passwordPercent}%</span>
+            <span className={isPasswordStrong ? "text-[#FF6A00]" : "text-[#FF6A00]"}>{passwordPercent}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
             <div
               className={`h-full rounded-full transition-all ${
-                isPasswordStrong ? "bg-emerald-500" : passwordScore >= 3 ? "bg-orange-500" : "bg-red-500"
+                isPasswordStrong ? "bg-[#FF6A00]" : passwordScore >= 3 ? "bg-[#FF6A00]" : "bg-red-500"
               }`}
               style={{ width: `${passwordPercent}%` }}
             />
@@ -123,7 +123,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
 
         <div className="grid gap-2 text-xs font-medium text-slate-600 sm:grid-cols-2">
           {passwordRules.map((rule) => (
-            <div key={rule.label} className={rule.valid ? "flex items-center gap-2 text-emerald-600" : "flex items-center gap-2"}>
+            <div key={rule.label} className={rule.valid ? "flex items-center gap-2 text-[#FF6A00]" : "flex items-center gap-2"}>
               <Check className="h-3.5 w-3.5" />
               {rule.label}
             </div>
@@ -136,15 +136,15 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
           type="checkbox"
           checked={acceptedTerms}
           onChange={(e) => setAcceptedTerms(e.target.checked)}
-          className="mt-1 h-4 w-4 rounded border-slate-300 accent-orange-600"
+          className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#FF6A00]"
         />
         <span>
           Ao criar uma conta, você concorda com nossos{" "}
-          <a href="#" className="font-semibold text-orange-600 hover:text-orange-500">
+          <a href="#" className="font-semibold text-[#FF6A00] hover:text-[#FF6A00]">
             Termos de Serviço
           </a>{" "}
           e{" "}
-          <a href="#" className="font-semibold text-orange-600 hover:text-orange-500">
+          <a href="#" className="font-semibold text-[#FF6A00] hover:text-[#FF6A00]">
             Política de Privacidade
           </a>
           .
@@ -153,7 +153,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
 
       <Button
         type="submit"
-        className="h-12 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 text-base font-bold shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-orange-700"
+        className="h-12 w-full rounded-2xl bg-gradient-to-r from-[#FF6A00] to-[#e85f00] text-base font-bold shadow-lg shadow-[#FF6A00]/20 hover:from-[#e85f00] hover:to-[#cc5500]"
         disabled={!canSubmit}
       >
         {isLoading ? "Criando conta..." : "Começar agora"}
@@ -165,7 +165,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="font-semibold text-orange-600 hover:text-orange-500"
+            className="font-semibold text-[#FF6A00] hover:text-[#FF6A00]"
           >
             Faça login
           </button>

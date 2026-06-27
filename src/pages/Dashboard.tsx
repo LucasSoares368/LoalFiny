@@ -126,13 +126,13 @@ const Dashboard = () => {
               <div key={label} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
                 <span className="mr-2 text-[10px] text-slate-400">{label}</span>
                 {value}
-                <span className="ml-2 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-600">{change}</span>
+                <span className="ml-2 rounded-full bg-[#FF6A00]/10 px-1.5 py-0.5 text-[10px] text-[#FF6A00]">{change}</span>
               </div>
             ))}
           </div>
 
           <div className="flex items-center gap-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
-            <Button className="h-9 rounded-xl bg-emerald-600 px-5 text-sm font-bold hover:bg-emerald-700">
+            <Button className="h-9 rounded-xl bg-[#FF6A00] px-5 text-sm font-bold hover:bg-[#e85f00]">
               <UserRound className="mr-2 h-4 w-4" />
               Pessoal
             </Button>
@@ -145,13 +145,13 @@ const Dashboard = () => {
 
         <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
               <UserRound className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-normal text-slate-950">Olá, {userName}! 👋</h1>
               <p className="text-sm font-medium text-slate-500">
-                Visualizando perfil <span className="font-bold text-emerald-600">Pessoal</span>
+                Visualizando perfil <span className="font-bold text-[#FF6A00]">Pessoal</span>
               </p>
             </div>
           </div>
@@ -166,9 +166,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <section className="mb-5 rounded-3xl border border-emerald-400 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+        <section className="mb-5 rounded-3xl border border-[#FF6A00] bg-gradient-to-br from-[#FF6A00]/10 to-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FF6A00] text-white">
               <Wallet className="h-7 w-7" />
             </div>
             <div>
@@ -176,7 +176,7 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-slate-500">
                 Soma de {accounts.length} conta{accounts.length === 1 ? "" : "s"} pessoa{accounts.length === 1 ? "l" : "is"}
               </p>
-              <p className="mt-5 text-5xl font-bold text-emerald-600">{formatCurrency(totalBankBalance)}</p>
+              <p className="mt-5 text-5xl font-bold text-[#FF6A00]">{formatCurrency(totalBankBalance)}</p>
               <p className="mt-2 text-sm text-slate-500">
                 {accounts.length ? "Saldo consolidado das contas cadastradas." : "Cadastre seus bancos para ver o saldo consolidado."}
               </p>
@@ -185,7 +185,7 @@ const Dashboard = () => {
         </section>
 
         <div className="mb-5 grid gap-4 md:grid-cols-3">
-          <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="emerald" />
+          <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="orange" />
           <MiniMetric title="Despesas pessoal" value={data.despesas} icon={TrendingDown} tone="red" />
           <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="sky" />
         </div>
@@ -200,14 +200,14 @@ const Dashboard = () => {
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={Landmark} title="Meus bancos" subtitle="Cadastre seus bancos para ter uma visão unificada" />
             <div className="mt-6 flex justify-center">
-              <Button className="rounded-full bg-emerald-600 px-6 font-bold hover:bg-emerald-700" onClick={() => navigate("/carteira")}>
+              <Button className="rounded-full bg-[#FF6A00] px-6 font-bold hover:bg-[#e85f00]" onClick={() => navigate("/carteira")}>
                 <Plus className="mr-2 h-4 w-4" />
                 Cadastrar banco
               </Button>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-emerald-100 bg-white p-6 shadow-sm">
+          <Card className="rounded-2xl border-[#FF6A00]/20 bg-white p-6 shadow-sm">
             <SectionTitle icon={Target} title="Reserva de emergência" subtitle="Configure seus custos fixos" />
             <p className="my-9 text-sm text-slate-500">Cadastre seus custos fixos para calcular a meta.</p>
             <Button variant="outline" className="h-11 w-full rounded-2xl font-bold" onClick={() => navigate("/metas")}>
@@ -219,9 +219,9 @@ const Dashboard = () => {
         <Card className="mb-5 rounded-2xl border-slate-700/40 bg-white p-6 shadow-sm">
           <SectionTitle icon={Wallet} title="Visão consolidada" subtitle="Pessoal + empresarial no mês atual" />
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <SummaryPill label="Receitas" value={data.receitas} tone="emerald" />
+            <SummaryPill label="Receitas" value={data.receitas} tone="orange" />
             <SummaryPill label="Despesas" value={data.despesas} tone="red" />
-            <SummaryPill label="Saldo" value={data.saldo} tone="emerald" />
+            <SummaryPill label="Saldo" value={data.saldo} tone="orange" />
           </div>
           <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
             <div>
@@ -234,9 +234,9 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card className="mb-5 rounded-2xl border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+        <Card className="mb-5 rounded-2xl border-[#FF6A00]/20 bg-gradient-to-br from-[#FF6A00]/10 to-white p-6 shadow-sm">
           <div className="flex gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
               <Crown className="h-6 w-6" />
             </div>
             <div>
@@ -248,7 +248,7 @@ const Dashboard = () => {
                 <li>Dependência de renda variável</li>
                 <li>Análise automática e personalizada</li>
               </ul>
-              <Button className="mt-4 rounded-full bg-emerald-600 px-6 font-bold hover:bg-emerald-700">
+              <Button className="mt-4 rounded-full bg-[#FF6A00] px-6 font-bold hover:bg-[#e85f00]">
                 Fazer upgrade para Pro
               </Button>
             </div>
@@ -259,9 +259,9 @@ const Dashboard = () => {
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={Calendar} title={`Resumo de ${monthLabel()}`} subtitle="Comparativo com o mês anterior" />
             <div className="mt-5 space-y-4">
-              <SummaryRow label="Receitas" value={data.receitas} tone="emerald" />
+              <SummaryRow label="Receitas" value={data.receitas} tone="orange" />
               <SummaryRow label="Despesas" value={data.despesas} tone="red" />
-              <SummaryRow label="Saldo do mês" value={data.saldo} tone="emerald" />
+              <SummaryRow label="Saldo do mês" value={data.saldo} tone="orange" />
             </div>
             <div className="mt-5 flex items-end justify-between">
               <div>
@@ -293,7 +293,7 @@ const Dashboard = () => {
                       <span>{formatCurrency(value)}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100">
-                      <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (value / Math.max(data.despesas, 1)) * 100)}%` }} />
+                      <div className="h-2 rounded-full bg-[#FF6A00]" style={{ width: `${Math.min(100, (value / Math.max(data.despesas, 1)) * 100)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -311,18 +311,18 @@ const Dashboard = () => {
 const SectionTitle = ({ icon: Icon, title, subtitle }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle: string }) => (
   <div>
     <h2 className="flex items-center gap-2 text-xl font-bold text-slate-950">
-      <Icon className="h-5 w-5 text-emerald-600" />
+      <Icon className="h-5 w-5 text-[#FF6A00]" />
       {title}
     </h2>
     <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
   </div>
 );
 
-const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: number; icon: React.ComponentType<{ className?: string }>; tone: "emerald" | "red" | "sky" }) => {
+const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: number; icon: React.ComponentType<{ className?: string }>; tone: "orange" | "red" | "navy" }) => {
   const colors = {
-    emerald: "border-l-emerald-500 bg-emerald-50 text-emerald-600",
+    orange: "border-l-[#FF6A00] bg-[#FF6A00]/10 text-[#FF6A00]",
     red: "border-l-red-500 bg-red-50 text-red-500",
-    sky: "border-l-sky-500 bg-sky-50 text-sky-500",
+    navy: "border-l-[#0D1B2A] bg-[#0D1B2A]/5 text-[#0D1B2A]",
   };
   return (
     <Card className={`rounded-2xl border-l-4 border-slate-200 p-5 shadow-sm ${colors[tone]}`}>
@@ -337,12 +337,12 @@ const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: 
 
 const Distribution = ({ label, value, amount, danger = false }: { label: string; value: number; amount: number; danger?: boolean }) => (
   <div className="mt-5">
-    <p className={`mb-2 text-sm font-semibold ${danger ? "text-red-500" : "text-emerald-600"}`}>{label}</p>
+    <p className={`mb-2 text-sm font-semibold ${danger ? "text-red-500" : "text-[#FF6A00]"}`}>{label}</p>
     <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">
-      <div className="bg-emerald-500 text-center text-[10px] font-bold text-white" style={{ width: `${value / 2}%` }}>
+      <div className="bg-[#FF6A00] text-center text-[10px] font-bold text-white" style={{ width: `${value / 2}%` }}>
         50%
       </div>
-      <div className="bg-sky-500 text-center text-[10px] font-bold text-white" style={{ width: `${100 - value / 2}%` }}>
+      <div className="bg-[#0D1B2A]/50 text-center text-[10px] font-bold text-white" style={{ width: `${100 - value / 2}%` }}>
         50%
       </div>
     </div>
@@ -353,15 +353,15 @@ const Distribution = ({ label, value, amount, danger = false }: { label: string;
   </div>
 );
 
-const SummaryPill = ({ label, value, tone }: { label: string; value: number; tone: "emerald" | "red" }) => (
-  <div className={`rounded-2xl p-4 text-center ${tone === "red" ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600"}`}>
+const SummaryPill = ({ label, value, tone }: { label: string; value: number; tone: "orange" | "red" }) => (
+  <div className={`rounded-2xl p-4 text-center ${tone === "red" ? "bg-red-50 text-red-500" : "bg-[#FF6A00]/10 text-[#FF6A00]"}`}>
     <p className="text-[11px] font-bold uppercase tracking-wide">{label}</p>
     <p className="mt-1 font-bold">{formatCurrency(value)}</p>
   </div>
 );
 
-const SummaryRow = ({ label, value, tone }: { label: string; value: number; tone: "emerald" | "red" }) => (
-  <div className={`flex items-center justify-between rounded-2xl border p-4 ${tone === "red" ? "border-red-100 bg-red-50 text-red-500" : "border-emerald-100 bg-emerald-50 text-emerald-600"}`}>
+const SummaryRow = ({ label, value, tone }: { label: string; value: number; tone: "orange" | "red" }) => (
+  <div className={`flex items-center justify-between rounded-2xl border p-4 ${tone === "red" ? "border-red-100 bg-red-50 text-red-500" : "border-[#FF6A00]/20 bg-[#FF6A00]/10 text-[#FF6A00]"}`}>
     <div>
       <p className="text-sm font-semibold text-slate-500">{label}</p>
       <p className="text-xl font-bold">{formatCurrency(value)}</p>
@@ -382,7 +382,7 @@ const SimpleChart = ({ receitas, despesas }: { receitas: number; despesas: numbe
           return (
             <div key={month} className="flex flex-1 flex-col items-center justify-end gap-2">
               <div className="flex items-end gap-1">
-                <span className="w-3 rounded-t bg-emerald-500" style={{ height: `${Math.max(8, receitaHeight)}px` }} />
+                <span className="w-3 rounded-t bg-[#FF6A00]" style={{ height: `${Math.max(8, receitaHeight)}px` }} />
                 <span className="w-3 rounded-t bg-red-500" style={{ height: `${Math.max(8, despesaHeight)}px` }} />
               </div>
               <span className="text-xs text-slate-500">{month}</span>
@@ -391,7 +391,7 @@ const SimpleChart = ({ receitas, despesas }: { receitas: number; despesas: numbe
         })}
       </div>
       <div className="mt-4 flex justify-center gap-5 text-sm font-bold">
-        <span className="text-emerald-600">■ Receitas</span>
+        <span className="text-[#FF6A00]">■ Receitas</span>
         <span className="text-red-500">■ Despesas</span>
       </div>
     </div>
