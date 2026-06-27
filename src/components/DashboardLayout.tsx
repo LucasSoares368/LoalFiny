@@ -126,9 +126,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="p-6 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-orange-500 rounded-lg p-2">
-                <span className="text-white font-bold text-xl">M</span>
-              </div>
+              <img src="/brand/icon.png" alt="LocalFiny" className="h-10 w-10 rounded-lg object-contain" />
               {!isCollapsed && (
                 <span className="text-xl font-bold text-foreground">LocalFiny</span>
               )}

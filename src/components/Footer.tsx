@@ -4,11 +4,8 @@ export const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="bg-orange-500 rounded-lg p-2">
-                <span className="text-white font-bold text-xl">M</span>
-              </div>
-              <span className="text-2xl font-bold">LocalFiny</span>
+            <div className="flex items-center mb-6">
+              <img src="/brand/logo.png" alt="LocalFiny" className="h-12 w-auto rounded-md object-contain" />
             </div>
             <p className="text-gray-400 leading-relaxed">A plataforma completa para gerenciar suas finanças pessoais com inteligência.</p>
           </div>

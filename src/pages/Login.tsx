@@ -39,11 +39,8 @@ const Login = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-orange-500 rounded-lg p-3">
-                <span className="text-white font-bold text-2xl">M</span>
-              </div>
+              <img src="/brand/logo.png" alt="LocalFiny" className="h-20 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">LocalFiny</h1>
             <p className="text-gray-600 dark:text-slate-300 mt-2">
               {mode === "login" && "Faça login em sua conta"}
               {mode === "register" && "Crie sua conta"}
