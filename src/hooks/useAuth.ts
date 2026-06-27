@@ -1,7 +1,17 @@
 import { useState, useEffect } from "react";
-import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+type User = {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+};
+
+type Session = {
+  access_token: string;
+  user: User;
+};
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);

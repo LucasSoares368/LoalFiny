@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -51,7 +52,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: Bot, label: "IA", path: "/ia" },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("userToken");
     localStorage.removeItem("userData");
     localStorage.removeItem("isAuthenticated");
