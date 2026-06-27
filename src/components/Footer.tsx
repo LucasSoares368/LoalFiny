@@ -5,7 +5,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center mb-6">
-              <img src="/brand/logo.png" alt="LocalFiny" className="h-12 w-auto rounded-md object-contain" />
+              <img src="/brand/logo-dark.png" alt="LocalFiny" className="h-12 w-auto object-contain" />
             </div>
             <p className="text-gray-400 leading-relaxed">A plataforma completa para gerenciar suas finanças pessoais com inteligência.</p>
           </div>

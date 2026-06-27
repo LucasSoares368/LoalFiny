@@ -12,20 +12,21 @@ export const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center">
-            <img src="/brand/logo.png" alt="LocalFiny" className="h-12 w-auto object-contain" />
+            <img src="/brand/logo.png" alt="LocalFiny" className="h-12 w-auto object-contain dark:hidden" />
+            <img src="/brand/logo-dark.png" alt="LocalFiny" className="hidden h-12 w-auto object-contain dark:block" />
           </Link>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#recursos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+            <a href="#recursos" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
               Recursos
             </a>
-            <a href="#como-funciona" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+            <a href="#como-funciona" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
               Como Funciona
             </a>
-            <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+            <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
               Preços
             </a>
-            <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+            <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
               Contato
             </a>
           </nav>
@@ -37,7 +38,7 @@ export const Header = () => {
               </Button>
             </Link>
             <Link to="/login">
-              <Button className="bg-orange-500 hover:bg-orange-600">
+              <Button className="bg-[#FF6A00] hover:bg-[#e85f00]">
                 Começar Grátis
               </Button>
             </Link>
@@ -54,16 +55,16 @@ export const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100">
             <nav className="flex flex-col space-y-4 mt-4">
-              <a href="#recursos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+              <a href="#recursos" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
                 Recursos
               </a>
-              <a href="#como-funciona" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+              <a href="#como-funciona" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
                 Como Funciona
               </a>
-              <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+              <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
                 Preços
               </a>
-              <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
+              <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-[#FF6A00] transition-colors">
                 Contato
               </a>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100">
@@ -73,7 +74,7 @@ export const Header = () => {
                   </Button>
                 </Link>
                 <Link to="/login">
-                  <Button className="bg-orange-500 hover:bg-orange-600 w-full">
+                  <Button className="bg-[#FF6A00] hover:bg-[#e85f00] w-full">
                     Começar Grátis
                   </Button>
                 </Link>

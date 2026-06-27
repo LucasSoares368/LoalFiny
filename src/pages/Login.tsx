@@ -45,9 +45,9 @@ const Login = () => {
 
           <div className="relative flex w-full flex-col justify-between px-16 py-14">
             <img
-              src="/brand/logo.png"
+              src="/brand/logo-dark.png"
               alt="LocalFiny"
-              className="h-16 w-fit rounded-lg bg-white object-contain p-1.5"
+              className="h-16 w-fit object-contain"
             />
 
             <div className="max-w-2xl">
