@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -584,7 +584,7 @@ const Dashboard = () => {
                         {veiculo.marca} {veiculo.modelo}
                       </p>
                       <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">
-                        {veiculo.ano} â€¢ {veiculo.quilometragem.toLocaleString()}{" "}
+                        {veiculo.ano} • {veiculo.quilometragem.toLocaleString()}{" "}
                         km
                       </p>
                     </div>

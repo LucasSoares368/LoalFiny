@@ -1,4 +1,4 @@
-﻿import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,16 +88,16 @@ export const DetalhesVeiculoModal = ({
                 </Button>
               </div>
             </div>
-            <p className="text-gray-600 dark:text-slate-300">Gerenciamento de manutenÃ§Ãµes e histÃ³rico do veÃ­culo</p>
+            <p className="text-gray-600 dark:text-slate-300">Gerenciamento de manutenções e histórico do veículo</p>
           </DialogHeader>
           
           <div className="space-y-6">
-            {/* InformaÃ§Ãµes do VeÃ­culo */}
+            {/* Informações do Veículo */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Car className="w-5 h-5 mr-2 text-orange-500" />
-                  InformaÃ§Ãµes do VeÃ­culo
+                  Informações do Veículo
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -123,12 +123,12 @@ export const DetalhesVeiculoModal = ({
                     <p className="font-medium">{veiculo.cor}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-slate-300">CombustÃ­vel:</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-300">Combustível:</p>
                     <p className="font-medium">{veiculo.combustivel}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-slate-300">Data de aquisiÃ§Ã£o:</p>
-                    <p className="font-medium">{veiculo.data_aquisicao || "NÃ£o informada"}</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-300">Data de aquisição:</p>
+                    <p className="font-medium">{veiculo.data_aquisicao || "Não informada"}</p>
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-600 dark:text-slate-300">Quilometragem:</p>
@@ -150,12 +150,12 @@ export const DetalhesVeiculoModal = ({
               </CardContent>
             </Card>
 
-            {/* ManutenÃ§Ãµes Pendentes */}
+            {/* Manutenções Pendentes */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
-                  ManutenÃ§Ãµes Pendentes
+                  Manutenções Pendentes
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -186,7 +186,7 @@ export const DetalhesVeiculoModal = ({
                 ) : (
                   <div className="text-center py-8 text-gray-500 dark:text-slate-400">
                     <Settings className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>Nenhuma manutenÃ§Ã£o pendente</p>
+                    <p>Nenhuma manutenção pendente</p>
                   </div>
                 )}
               </CardContent>

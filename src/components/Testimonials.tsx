@@ -1,4 +1,4 @@
-﻿
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Star } from "lucide-react";
 
@@ -6,22 +6,22 @@ export const Testimonials = () => {
   const testimonials = [
     {
       name: "Maria Silva",
-      role: "EmpresÃ¡ria",
-      content: "O Mordomo transformou como eu gerencio minhas finanÃ§as. Agora tenho controle total sobre meus gastos e receitas.",
+      role: "Empresária",
+      content: "O Mordomo transformou como eu gerencio minhas finanças. Agora tenho controle total sobre meus gastos e receitas.",
       rating: 5,
       avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b75c?w=150&h=150&fit=crop&crop=face"
     },
     {
-      name: "JoÃ£o Santos",
+      name: "João Santos",
       role: "Freelancer",
-      content: "A integraÃ§Ã£o com WhatsApp Ã© fantÃ¡stica! Posso registrar transaÃ§Ãµes rapidamente, onde quer que eu esteja.",
+      content: "A integração com WhatsApp é fantástica! Posso registrar transações rapidamente, onde quer que eu esteja.",
       rating: 5,
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
     },
     {
       name: "Ana Costa",
       role: "Consultora",
-      content: "Os relatÃ³rios sÃ£o muito detalhados e me ajudam a tomar decisÃµes financeiras mais inteligentes.",
+      content: "Os relatórios são muito detalhados e me ajudam a tomar decisões financeiras mais inteligentes.",
       rating: 5,
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
     }
@@ -31,9 +31,9 @@ export const Testimonials = () => {
     <section className="py-20 bg-gray-50 dark:bg-slate-900/40">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">O QUE DIZEM NOSSOS USUÃRIOS</h2>
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">O QUE DIZEM NOSSOS USUÁRIOS</h2>
           <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
-            Milhares de pessoas jÃ¡ transformaram suas finanÃ§as com o Mordomo
+            Milhares de pessoas já transformaram suas finanças com o Mordomo
           </p>
         </div>
 

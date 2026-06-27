@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,7 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="text-center mb-4">
         <p className="text-sm text-gray-600 dark:text-slate-300">
-          Digite seu email para receber um link de redefiniÃ§Ã£o de senha.
+          Digite seu email para receber um link de redefinição de senha.
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
         className="w-full bg-orange-500 hover:bg-orange-600"
         disabled={isLoading}
       >
-        {isLoading ? "Enviando..." : "Enviar link de recuperaÃ§Ã£o"}
+        {isLoading ? "Enviando..." : "Enviar link de recuperação"}
       </Button>
 
       <div className="text-center">

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,13 +59,13 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="organizationName">Nome da organizaÃ§Ã£o</Label>
+        <Label htmlFor="organizationName">Nome da organização</Label>
         <Input
           id="organizationName"
           type="text"
           value={organizationName}
           onChange={(e) => setOrganizationName(e.target.value)}
-          placeholder="Nome da sua empresa ou organizaÃ§Ã£o"
+          placeholder="Nome da sua empresa ou organização"
           required
         />
       </div>
@@ -102,7 +102,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="MÃ­nimo 6 caracteres"
+            placeholder="Mínimo 6 caracteres"
             required
           />
           <Button
@@ -158,13 +158,13 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
 
       <div className="text-center">
         <span className="text-sm text-gray-600 dark:text-slate-300">
-          JÃ¡ tem uma conta?{" "}
+          Já tem uma conta?{" "}
           <button
             type="button"
             onClick={onSwitchToLogin}
             className="text-orange-600 hover:text-orange-500 font-medium"
           >
-            FaÃ§a login
+            Faça login
           </button>
         </span>
       </div>

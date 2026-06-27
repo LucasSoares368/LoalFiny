@@ -1,4 +1,4 @@
-﻿import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -52,7 +52,7 @@ export const CrescimentoAcumuladoCard = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  ComparaÃ§Ã£o entre o acumulado do ano atual vs mesmo perÃ­odo do
+                  Comparação entre o acumulado do ano atual vs mesmo período do
                   ano passado
                 </TooltipContent>
               </Tooltip>

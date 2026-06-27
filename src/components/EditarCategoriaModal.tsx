@@ -1,4 +1,4 @@
-﻿
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -100,12 +100,12 @@ export const EditarCategoriaModal = ({ categoria, open, onOpenChange }: EditarCa
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descricao">DescriÃ§Ã£o</Label>
+            <Label htmlFor="descricao">Descrição</Label>
             <Input
               id="descricao"
               value={formData.descricao}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
-              placeholder="DescriÃ§Ã£o da categoria"
+              placeholder="Descrição da categoria"
             />
           </div>
 
@@ -147,7 +147,7 @@ export const EditarCategoriaModal = ({ categoria, open, onOpenChange }: EditarCa
               Cancelar
             </Button>
             <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-              Salvar AlteraÃ§Ãµes
+              Salvar Alterações
             </Button>
           </div>
         </form>

@@ -1,31 +1,31 @@
-﻿
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const FAQ = () => {
   const faqs = [
     {
-      question: "O Mordomo Ã© gratuito?",
-      answer: "Sim! O Mordomo oferece um plano gratuito completo com recursos essenciais para controle financeiro. VocÃª pode fazer upgrade para planos pagos quando precisar de recursos avanÃ§ados."
+      question: "O Mordomo é gratuito?",
+      answer: "Sim! O Mordomo oferece um plano gratuito completo com recursos essenciais para controle financeiro. Você pode fazer upgrade para planos pagos quando precisar de recursos avançados."
     },
     {
-      question: "Como funciona a integraÃ§Ã£o com WhatsApp?",
-      answer: "Nosso assistente virtual permite que vocÃª registre receitas e despesas enviando mensagens simples. Basta escrever algo como 'Gastei R$ 50 no supermercado' e a transaÃ§Ã£o serÃ¡ automaticamente registrada."
+      question: "Como funciona a integração com WhatsApp?",
+      answer: "Nosso assistente virtual permite que você registre receitas e despesas enviando mensagens simples. Basta escrever algo como 'Gastei R$ 50 no supermercado' e a transação será automaticamente registrada."
     },
     {
-      question: "Meus dados estÃ£o seguros?",
-      answer: "Absolutamente! Utilizamos criptografia de ponta e seguimos as melhores prÃ¡ticas de seguranÃ§a. Seus dados financeiros sÃ£o protegidos com o mesmo nÃ­vel de seguranÃ§a dos bancos."
+      question: "Meus dados estão seguros?",
+      answer: "Absolutamente! Utilizamos criptografia de ponta e seguimos as melhores práticas de segurança. Seus dados financeiros são protegidos com o mesmo nível de segurança dos bancos."
     },
     {
       question: "Posso cancelar a qualquer momento?",
-      answer: "Sim, vocÃª pode cancelar sua assinatura a qualquer momento. NÃ£o hÃ¡ contratos ou taxas de cancelamento. Seu acesso aos recursos premium serÃ¡ mantido atÃ© o final do perÃ­odo pago."
+      answer: "Sim, você pode cancelar sua assinatura a qualquer momento. Não há contratos ou taxas de cancelamento. Seu acesso aos recursos premium será mantido até o final do período pago."
     },
     {
-      question: "HÃ¡ limite de transaÃ§Ãµes?",
-      answer: "No plano gratuito, vocÃª pode registrar atÃ© 100 transaÃ§Ãµes por mÃªs. Nos planos pagos, nÃ£o hÃ¡ limite de transaÃ§Ãµes."
+      question: "Há limite de transações?",
+      answer: "No plano gratuito, você pode registrar até 100 transações por mês. Nos planos pagos, não há limite de transações."
     },
     {
       question: "Posso importar dados de outros apps?",
-      answer: "Sim! Oferecemos importaÃ§Ã£o de dados de planilhas Excel, CSV e integraÃ§Ã£o com os principais bancos brasileiros (em desenvolvimento)."
+      answer: "Sim! Oferecemos importação de dados de planilhas Excel, CSV e integração com os principais bancos brasileiros (em desenvolvimento)."
     }
   ];
 
@@ -35,7 +35,7 @@ export const FAQ = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">PERGUNTAS FREQUENTES</h2>
           <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
-            Tire suas dÃºvidas sobre o Mordomo
+            Tire suas dúvidas sobre o Mordomo
           </p>
         </div>
 

@@ -1,4 +1,4 @@
-﻿
+
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Menu } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +26,7 @@ export const Header = () => {
               Como Funciona
             </a>
             <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
-              PreÃ§os
+              Preços
             </a>
             <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
               Contato
@@ -41,7 +41,7 @@ export const Header = () => {
             </Link>
             <Link to="/login">
               <Button className="bg-orange-500 hover:bg-orange-600">
-                ComeÃ§ar GrÃ¡tis
+                Começar Grátis
               </Button>
             </Link>
           </div>
@@ -64,7 +64,7 @@ export const Header = () => {
                 Como Funciona
               </a>
               <a href="#precos" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
-                PreÃ§os
+                Preços
               </a>
               <a href="#contato" className="text-gray-600 dark:text-slate-300 hover:text-orange-500 transition-colors">
                 Contato
@@ -77,7 +77,7 @@ export const Header = () => {
                 </Link>
                 <Link to="/login">
                   <Button className="bg-orange-500 hover:bg-orange-600 w-full">
-                    ComeÃ§ar GrÃ¡tis
+                    Começar Grátis
                   </Button>
                 </Link>
               </div>

@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +94,7 @@ export const LoginForm = ({ onSwitchToRegister, onSwitchToForgot }: LoginFormPro
 
       <div className="text-center">
         <span className="text-sm text-gray-600 dark:text-slate-300">
-          NÃ£o tem uma conta?{" "}
+          Não tem uma conta?{" "}
           <button
             type="button"
             onClick={onSwitchToRegister}

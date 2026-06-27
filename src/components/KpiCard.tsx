@@ -1,4 +1,4 @@
-﻿import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 

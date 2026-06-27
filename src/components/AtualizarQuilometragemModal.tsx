@@ -1,4 +1,4 @@
-﻿
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export const AtualizarQuilometragemModal = ({
     if (!veiculo || !quilometragem.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, insira uma quilometragem vÃ¡lida.",
+        description: "Por favor, insira uma quilometragem válida.",
         variant: "destructive"
       });
       return;
@@ -47,7 +47,7 @@ export const AtualizarQuilometragemModal = ({
     if (novaQuilometragem < 0) {
       toast({
         title: "Erro",
-        description: "A quilometragem nÃ£o pode ser negativa.",
+        description: "A quilometragem não pode ser negativa.",
         variant: "destructive"
       });
       return;
@@ -56,7 +56,7 @@ export const AtualizarQuilometragemModal = ({
     if (novaQuilometragem < veiculo.quilometragem) {
       toast({
         title: "Erro",
-        description: "A nova quilometragem nÃ£o pode ser menor que a atual.",
+        description: "A nova quilometragem não pode ser menor que a atual.",
         variant: "destructive"
       });
       return;
@@ -85,7 +85,7 @@ export const AtualizarQuilometragemModal = ({
         
         <div className="space-y-4">
           <div className="text-sm text-gray-600 dark:text-slate-300">
-            <p><strong>VeÃ­culo:</strong> {veiculo.marca} {veiculo.modelo} {veiculo.ano}</p>
+            <p><strong>Veículo:</strong> {veiculo.marca} {veiculo.modelo} {veiculo.ano}</p>
             <p><strong>Quilometragem atual:</strong> {veiculo.quilometragem.toLocaleString()} km</p>
           </div>
 
@@ -102,7 +102,7 @@ export const AtualizarQuilometragemModal = ({
                 required
               />
               <p className="text-xs text-gray-500 dark:text-slate-400">
-                A nova quilometragem deve ser maior ou igual Ã  atual
+                A nova quilometragem deve ser maior ou igual à atual
               </p>
             </div>
 

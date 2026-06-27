@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export const NovaCategoriaModal = ({ trigger }: NovaCategoriaModalProps) => {
       return;
     }
     
-    // Resetar formulÃ¡rio
+    // Resetar formulário
     setFormData({
       nome: '',
       descricao: '',
@@ -103,12 +103,12 @@ export const NovaCategoriaModal = ({ trigger }: NovaCategoriaModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descricao">DescriÃ§Ã£o</Label>
+            <Label htmlFor="descricao">Descrição</Label>
             <Input
               id="descricao"
               value={formData.descricao}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
-              placeholder="DescriÃ§Ã£o da categoria"
+              placeholder="Descrição da categoria"
             />
           </div>
 

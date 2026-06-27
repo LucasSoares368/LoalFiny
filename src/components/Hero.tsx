@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, MessageCircle } from "lucide-react";
@@ -19,19 +19,19 @@ export const Hero = () => {
           
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-slate-100 mb-6">
             Gerencie suas
-            <span className="text-orange-500 block">finanÃ§as de forma</span>
+            <span className="text-orange-500 block">finanças de forma</span>
             simples e inteligente
           </h1>
           
           <p className="text-xl text-gray-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
-            O Mordomo Ã© a plataforma completa para gerenciar suas finanÃ§as pessoais e empresariais. 
-            Dashboard intuitivo, relatÃ³rios detalhados e agora com assistente no WhatsApp.
+            O Mordomo é a plataforma completa para gerenciar suas finanças pessoais e empresariais. 
+            Dashboard intuitivo, relatórios detalhados e agora com assistente no WhatsApp.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link to="/login">
               <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-lg px-8 py-4">
-                ComeÃ§ar GrÃ¡tis
+                Começar Grátis
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
@@ -41,7 +41,7 @@ export const Hero = () => {
               className="text-lg px-8 py-4"
               onClick={() => setIsDemoModalOpen(true)}
             >
-              Ver DemonstraÃ§Ã£o
+              Ver Demonstração
             </Button>
           </div>
 
@@ -66,8 +66,8 @@ export const Hero = () => {
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BarChart3 className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-slate-100">RelatÃ³rios Inteligentes</h3>
-              <p className="text-gray-600 dark:text-slate-300">AnÃ¡lises detalhadas dos seus gastos</p>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100">Relatórios Inteligentes</h3>
+              <p className="text-gray-600 dark:text-slate-300">Análises detalhadas dos seus gastos</p>
             </div>
             
             <div className="text-center">
@@ -75,7 +75,7 @@ export const Hero = () => {
                 <MessageCircle className="w-8 h-8 text-orange-600" />
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-slate-100">WhatsApp Integrado</h3>
-              <p className="text-gray-600 dark:text-slate-300">Lance transaÃ§Ãµes por mensagem</p>
+              <p className="text-gray-600 dark:text-slate-300">Lance transações por mensagem</p>
             </div>
           </div>
         </div>

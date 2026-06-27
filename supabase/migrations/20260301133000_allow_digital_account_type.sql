@@ -1,4 +1,4 @@
-﻿alter table public.bank_accounts
+alter table public.bank_accounts
 drop constraint if exists bank_accounts_account_type_check;
 
 alter table public.bank_accounts

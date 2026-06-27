@@ -1,4 +1,4 @@
-﻿
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ArrowRight } from "lucide-react";
@@ -9,13 +9,13 @@ export const Pricing = () => {
     {
       name: "Gratuito",
       price: "R$ 0",
-      period: "/mÃªs",
-      description: "Perfeito para comeÃ§ar",
+      period: "/mês",
+      description: "Perfeito para começar",
       features: [
-        "Dashboard bÃ¡sico",
+        "Dashboard básico",
         "Controle de receitas e despesas",
-        "Categorias bÃ¡sicas",
-        "RelatÃ³rios simples",
+        "Categorias básicas",
+        "Relatórios simples",
         "Suporte por email"
       ],
       popular: false
@@ -23,29 +23,29 @@ export const Pricing = () => {
     {
       name: "Premium",
       price: "R$ 29",
-      period: "/mÃªs",
-      description: "Para uso pessoal avanÃ§ado",
+      period: "/mês",
+      description: "Para uso pessoal avançado",
       features: [
         "Tudo do plano Gratuito",
         "Metas financeiras ilimitadas",
-        "RelatÃ³rios avanÃ§ados",
+        "Relatórios avançados",
         "Categorias personalizadas",
-        "IntegraÃ§Ã£o WhatsApp",
-        "Controle de veÃ­culos",
-        "Suporte prioritÃ¡rio"
+        "Integração WhatsApp",
+        "Controle de veículos",
+        "Suporte prioritário"
       ],
       popular: true
     },
     {
       name: "Empresarial",
       price: "R$ 99",
-      period: "/mÃªs",
+      period: "/mês",
       description: "Para empresas e freelancers",
       features: [
         "Tudo do plano Premium",
-        "MÃºltiplos usuÃ¡rios",
+        "Múltiplos usuários",
         "API completa",
-        "RelatÃ³rios personalizados",
+        "Relatórios personalizados",
         "Suporte 24/7"
       ],
       popular: false
@@ -56,12 +56,12 @@ export const Pricing = () => {
     <section id="precos" className="py-20 bg-white dark:bg-slate-900">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">PLANOS E PREÃ‡OS</h2>
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">PLANOS E PREÇOS</h2>
           <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
             Escolha o plano ideal para suas necessidades
           </p>
           <p className="text-gray-500 dark:text-slate-400 mt-4">
-            Comece gratuitamente e faÃ§a upgrade quando precisar de mais recursos
+            Comece gratuitamente e faça upgrade quando precisar de mais recursos
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export const Pricing = () => {
                     className={`w-full ${plan.popular ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-900 hover:bg-gray-800'} text-white`}
                     size="lg"
                   >
-                    {plan.name === "Gratuito" ? "ComeÃ§ar GrÃ¡tis" : "Assinar Agora"}
+                    {plan.name === "Gratuito" ? "Começar Grátis" : "Assinar Agora"}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                 </Link>

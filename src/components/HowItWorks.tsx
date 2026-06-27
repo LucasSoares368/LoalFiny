@@ -1,4 +1,4 @@
-﻿
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Smartphone, BarChart3, Target } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -20,7 +20,7 @@ export const HowItWorks = () => {
     {
       icon: Target,
       title: "3. Defina suas Metas",
-      description: "EstabeleÃ§a objetivos financeiros e acompanhe seu progresso em tempo real.",
+      description: "Estabeleça objetivos financeiros e acompanhe seu progresso em tempo real.",
       color: "bg-green-100 text-green-600"
     }
   ];
@@ -34,7 +34,7 @@ export const HowItWorks = () => {
             Simples de usar, poderoso nos resultados
           </p>
           <p className="text-gray-500 dark:text-slate-400 mt-4">
-            ConheÃ§a o funcionamento da plataforma e veja como Ã© simples gerenciar suas finanÃ§as.
+            Conheça o funcionamento da plataforma e veja como é simples gerenciar suas finanças.
           </p>
         </div>
 
@@ -51,13 +51,13 @@ export const HowItWorks = () => {
         </div>
 
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl p-12 text-center text-white">
-          <h3 className="text-3xl font-bold mb-4">Pronto para comeÃ§ar?</h3>
+          <h3 className="text-3xl font-bold mb-4">Pronto para começar?</h3>
           <p className="text-xl mb-8 opacity-90">
-            Junte-se a milhares de usuÃ¡rios que jÃ¡ transformaram suas finanÃ§as com o Mordomo
+            Junte-se a milhares de usuários que já transformaram suas finanças com o Mordomo
           </p>
           <Link to="/dashboard">
             <Button size="lg" className="bg-white dark:bg-slate-900 text-orange-600 hover:bg-gray-100 dark:hover:bg-slate-800 text-lg px-8 py-4">
-              ComeÃ§ar Agora GrÃ¡tis
+              Começar Agora Grátis
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </Link>

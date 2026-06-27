@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
     if (!formData.titulo || !formData.valorAlvo || !formData.dataLimite || !formData.categoriaId) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatÃ³rios.",
+        description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive"
       });
       return;
@@ -74,7 +74,7 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
 
     onAdicionarMeta(novaMeta);
     
-    // Resetar formulÃ¡rio
+    // Resetar formulário
     setFormData({
       titulo: '',
       tipo: 'economia',
@@ -112,12 +112,12 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="titulo">TÃ­tulo da Meta *</Label>
+              <Label htmlFor="titulo">Título da Meta *</Label>
               <Input
                 id="titulo"
                 value={formData.titulo}
                 onChange={(e) => handleInputChange('titulo', e.target.value)}
-                placeholder="Ex: Reserva de emergÃªncia"
+                placeholder="Ex: Reserva de emergência"
                 required
               />
             </div>
@@ -150,7 +150,7 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
               <SelectContent>
                 <SelectItem value="economia">Economia</SelectItem>
                 <SelectItem value="receita">Receita</SelectItem>
-                <SelectItem value="despesa">ReduÃ§Ã£o de Despesa</SelectItem>
+                <SelectItem value="despesa">Redução de Despesa</SelectItem>
                 <SelectItem value="investimento">Investimento</SelectItem>
               </SelectContent>
             </Select>
@@ -181,7 +181,7 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="dataInicio">Data de InÃ­cio</Label>
+              <Label htmlFor="dataInicio">Data de Início</Label>
               <Input
                 id="dataInicio"
                 type="date"
@@ -203,7 +203,7 @@ export const NovaMetaModal = ({ onAdicionarMeta, categoriasMetas }: NovaMetaModa
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descricao">DescriÃ§Ã£o</Label>
+            <Label htmlFor="descricao">Descrição</Label>
             <Textarea
               id="descricao"
               value={formData.descricao}

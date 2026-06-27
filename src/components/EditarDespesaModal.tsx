@@ -1,4 +1,4 @@
-﻿
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export const EditarDespesaModal = ({ despesa, isOpen, onClose, onSave }: EditarD
     if (!formData.descricao || !formData.valor || !formData.categoria || !formData.data) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatÃ³rios",
+        description: "Preencha todos os campos obrigatórios",
         variant: "destructive"
       });
       return;
@@ -92,7 +92,7 @@ export const EditarDespesaModal = ({ despesa, isOpen, onClose, onSave }: EditarD
         </DialogHeader>
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="descricao">DescriÃ§Ã£o *</Label>
+            <Label htmlFor="descricao">Descrição *</Label>
             <Input
               id="descricao"
               value={formData.descricao}
@@ -174,7 +174,7 @@ export const EditarDespesaModal = ({ despesa, isOpen, onClose, onSave }: EditarD
                   onChange={(e) => setFormData({...formData, tipo: e.target.value as 'fixa' | 'variavel'})}
                   className="text-orange-600"
                 />
-                <span>Despesa VariÃ¡vel</span>
+                <span>Despesa Variável</span>
               </label>
             </div>
           </div>
@@ -184,7 +184,7 @@ export const EditarDespesaModal = ({ despesa, isOpen, onClose, onSave }: EditarD
               Cancelar
             </Button>
             <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-              Salvar AlteraÃ§Ãµes
+              Salvar Alterações
             </Button>
           </div>
         </form>

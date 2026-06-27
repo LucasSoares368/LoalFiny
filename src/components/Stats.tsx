@@ -1,4 +1,4 @@
-﻿
+
 import { TrendingUp, Users, DollarSign, Clock } from "lucide-react";
 
 export const Stats = () => {
@@ -6,7 +6,7 @@ export const Stats = () => {
     {
       icon: Users,
       value: "50.000+",
-      label: "UsuÃ¡rios Ativos",
+      label: "Usuários Ativos",
       color: "text-blue-600"
     },
     {
@@ -18,7 +18,7 @@ export const Stats = () => {
     {
       icon: TrendingUp,
       value: "98%",
-      label: "SatisfaÃ§Ã£o",
+      label: "Satisfação",
       color: "text-orange-600"
     },
     {
@@ -33,7 +33,7 @@ export const Stats = () => {
     <section className="py-20 bg-orange-500">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-4">NÃšMEROS QUE FALAM POR SI</h2>
+          <h2 className="text-4xl font-bold text-white mb-4">NÚMEROS QUE FALAM POR SI</h2>
           <p className="text-xl text-orange-100 max-w-3xl mx-auto">
             Confiado por milhares de pessoas e empresas
           </p>

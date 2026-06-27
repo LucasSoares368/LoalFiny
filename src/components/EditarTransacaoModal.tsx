@@ -1,4 +1,4 @@
-﻿
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ export const EditarTransacaoModal = ({ isOpen, onClose, transacao, onSave }: Edi
     if (!descricao || !valor || !categoria || !data) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatÃ³rios.",
+        description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
       });
       return;
@@ -70,7 +70,7 @@ export const EditarTransacaoModal = ({ isOpen, onClose, transacao, onSave }: Edi
 
     toast({
       title: "Sucesso",
-      description: "TransaÃ§Ã£o editada com sucesso!",
+      description: "Transação editada com sucesso!",
     });
   };
 
@@ -84,20 +84,20 @@ export const EditarTransacaoModal = ({ isOpen, onClose, transacao, onSave }: Edi
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Editar TransaÃ§Ã£o</DialogTitle>
+          <DialogTitle>Editar Transação</DialogTitle>
           <DialogDescription>
-            Edite as informaÃ§Ãµes da transaÃ§Ã£o abaixo.
+            Edite as informações da transação abaixo.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="descricao">DescriÃ§Ã£o *</Label>
+            <Label htmlFor="descricao">Descrição *</Label>
             <Input
               id="descricao"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Ex: SalÃ¡rio, Supermercado..."
+              placeholder="Ex: Salário, Supermercado..."
             />
           </div>
           
@@ -157,7 +157,7 @@ export const EditarTransacaoModal = ({ isOpen, onClose, transacao, onSave }: Edi
             Cancelar
           </Button>
           <Button onClick={handleSave} className="bg-orange-500 hover:bg-orange-600">
-            Salvar AlteraÃ§Ãµes
+            Salvar Alterações
           </Button>
         </DialogFooter>
       </DialogContent>

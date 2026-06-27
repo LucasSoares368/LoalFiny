@@ -1,4 +1,4 @@
-﻿import { getComputedExpenseStatus } from "@/lib/expense-status";
+import { getComputedExpenseStatus } from "@/lib/expense-status";
 
 export type DespesaKpiItem = {
   id?: string;
