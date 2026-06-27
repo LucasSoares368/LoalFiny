@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,31 +19,25 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
     setIsLoading(true);
 
     const { error } = await resetPassword(email);
-    
+
     if (!error) {
       setEmailSent(true);
     }
-    
+
     setIsLoading(false);
   };
 
   if (emailSent) {
     return (
-      <div className="text-center space-y-4">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="text-green-800 font-medium mb-2">Email enviado com sucesso!</h3>
-          <p className="text-green-700 text-sm">
-            Enviamos um link para redefinir sua senha para o email {email}.
-            Verifique sua caixa de entrada e spam.
+      <div className="space-y-5 text-center">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <h3 className="mb-2 font-semibold text-emerald-900">Email enviado com sucesso</h3>
+          <p className="text-sm leading-6 text-emerald-700">
+            Enviamos um link para redefinir sua senha para {email}. Verifique sua caixa de entrada e spam.
           </p>
         </div>
-        
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onSwitchToLogin}
-          className="w-full"
-        >
+
+        <Button type="button" variant="outline" onClick={onSwitchToLogin} className="h-12 w-full rounded-2xl">
           Voltar para o login
         </Button>
       </div>
@@ -52,28 +45,25 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="text-center mb-4">
-        <p className="text-sm text-gray-600 dark:text-slate-300">
-          Digite seu email para receber um link de redefinição de senha.
-        </p>
-      </div>
-
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="font-semibold text-slate-900">
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="seu@email.com"
+          className="h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 text-base focus-visible:ring-orange-500"
           required
         />
       </div>
 
       <Button
         type="submit"
-        className="w-full bg-orange-500 hover:bg-orange-600"
+        className="h-12 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 text-base font-bold shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-orange-700"
         disabled={isLoading}
       >
         {isLoading ? "Enviando..." : "Enviar link de recuperação"}
@@ -83,7 +73,7 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="text-sm text-orange-600 hover:text-orange-500"
+          className="text-sm font-semibold text-orange-600 hover:text-orange-500"
         >
           Voltar para o login
         </button>
@@ -91,4 +81,3 @@ export const ForgotPasswordForm = ({ onSwitchToLogin }: ForgotPasswordFormProps)
     </form>
   );
 };
-

@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ResetPasswordFormProps {
   onSwitchToLogin: () => void;
 }
 
-export const ResetPasswordForm = ({
-  onSwitchToLogin,
-}: ResetPasswordFormProps) => {
+export const ResetPasswordForm = ({ onSwitchToLogin }: ResetPasswordFormProps) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,9 +44,7 @@ export const ResetPasswordForm = ({
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
         throw error;
@@ -56,8 +52,7 @@ export const ResetPasswordForm = ({
 
       toast({
         title: "Senha alterada",
-        description:
-          "Sua senha foi alterada com sucesso! Faça login com sua nova senha.",
+        description: "Sua senha foi alterada com sucesso. Faça login com sua nova senha.",
       });
 
       onSwitchToLogin();
@@ -66,8 +61,7 @@ export const ResetPasswordForm = ({
       console.error("Erro ao redefinir senha:", error);
       toast({
         title: "Erro",
-        description:
-          error.message || "Erro ao redefinir senha. Tente novamente.",
+        description: error.message || "Erro ao redefinir senha. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -75,10 +69,15 @@ export const ResetPasswordForm = ({
     }
   };
 
+  const inputClass =
+    "h-12 rounded-2xl border-slate-200 bg-slate-50 px-4 pr-12 text-base focus-visible:ring-orange-500";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="password">Nova senha</Label>
+        <Label htmlFor="password" className="font-semibold text-slate-900">
+          Nova senha
+        </Label>
         <div className="relative">
           <Input
             id="password"
@@ -86,26 +85,29 @@ export const ResetPasswordForm = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mínimo 6 caracteres"
+            className={inputClass}
             required
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            className="absolute right-1 top-1 h-10 px-3 hover:bg-transparent"
             onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
-              <EyeOff className="h-4 w-4 text-gray-400" />
+              <EyeOff className="h-4 w-4 text-slate-400" />
             ) : (
-              <Eye className="h-4 w-4 text-gray-400" />
+              <Eye className="h-4 w-4 text-slate-400" />
             )}
           </Button>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+        <Label htmlFor="confirmPassword" className="font-semibold text-slate-900">
+          Confirmar nova senha
+        </Label>
         <div className="relative">
           <Input
             id="confirmPassword"
@@ -113,19 +115,20 @@ export const ResetPasswordForm = ({
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirme sua nova senha"
+            className={inputClass}
             required
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            className="absolute right-1 top-1 h-10 px-3 hover:bg-transparent"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
           >
             {showConfirmPassword ? (
-              <EyeOff className="h-4 w-4 text-gray-400" />
+              <EyeOff className="h-4 w-4 text-slate-400" />
             ) : (
-              <Eye className="h-4 w-4 text-gray-400" />
+              <Eye className="h-4 w-4 text-slate-400" />
             )}
           </Button>
         </div>
@@ -133,7 +136,7 @@ export const ResetPasswordForm = ({
 
       <Button
         type="submit"
-        className="w-full bg-orange-500 hover:bg-orange-600"
+        className="h-12 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 text-base font-bold shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-orange-700"
         disabled={isLoading}
       >
         {isLoading ? "Alterando senha..." : "Alterar senha"}
@@ -143,7 +146,7 @@ export const ResetPasswordForm = ({
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="text-sm text-orange-600 hover:text-orange-500"
+          className="text-sm font-semibold text-orange-600 hover:text-orange-500"
         >
           Voltar para o login
         </button>
