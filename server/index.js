@@ -45,6 +45,7 @@ function publicUser(user) {
   return {
     id: user.id,
     email: user.email,
+    role: user.role || "user",
     user_metadata: {
       name: user.name,
       organization_name: user.organization_name,
@@ -243,14 +244,14 @@ app.post("/api/auth/signup", async (req, res) => {
     const id = uuidv4();
     const passwordHash = await bcrypt.hash(password, 12);
     await query(
-      "insert into users (id, email, password_hash, name, organization_name, telefone) values (?, ?, ?, ?, ?, ?)",
+      "insert into users (id, email, password_hash, role, name, organization_name, telefone) values (?, ?, ?, 'user', ?, ?, ?)",
       [id, email, passwordHash, name || null, organizationName || null, telefone || null],
     );
     await query(
       "insert into profiles (id, user_id, name, organization_name, telefone) values (?, ?, ?, ?, ?)",
       [uuidv4(), id, name || email, organizationName || null, telefone || null],
     );
-    const user = { id, email, name, organization_name: organizationName, telefone };
+    const user = { id, email, role: "user", name, organization_name: organizationName, telefone };
     res.json({ user: publicUser(user), session: { access_token: signToken(user), user: publicUser(user) } });
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Email ja cadastrado" });

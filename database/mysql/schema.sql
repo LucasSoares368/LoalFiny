@@ -2,6 +2,7 @@ create table if not exists users (
   id char(36) primary key,
   email varchar(255) not null unique,
   password_hash varchar(255) not null,
+  role enum('user','superadmin') not null default 'user',
   name varchar(255) null,
   organization_name varchar(255) null,
   telefone varchar(50) null,
