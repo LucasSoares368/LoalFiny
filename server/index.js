@@ -83,6 +83,7 @@ async function sendPasswordResetEmail(user, resetUrl) {
 
   const appName = process.env.APP_NAME || "LocalFiny";
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+  const logoUrl = `${PUBLIC_BASE_URL || "https://app.localfiny.com"}/brand/logo.png`;
   await mailer.sendMail({
     from: `${appName} <${from}>`,
     to: user.email,
@@ -100,6 +101,7 @@ async function sendPasswordResetEmail(user, resetUrl) {
     html: `
       <div style="margin:0;background:#f8fafc;padding:32px;font-family:Arial,sans-serif;color:#0f172a">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:18px;padding:32px;border:1px solid #e2e8f0">
+          <img src="${logoUrl}" alt="${appName}" style="display:block;width:180px;max-width:100%;height:auto;margin:0 0 28px;border-radius:10px" />
           <h1 style="margin:0 0 12px;font-size:24px;color:#0f172a">Redefina sua senha</h1>
           <p style="margin:0 0 20px;line-height:1.6;color:#475569">
             Recebemos uma solicitação para redefinir sua senha no <strong>${appName}</strong>.
