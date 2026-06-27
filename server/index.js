@@ -39,6 +39,9 @@ const mailer = process.env.SMTP_HOST
             pass: process.env.SMTP_PASS,
           }
         : undefined,
+      tls: {
+        rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
+      },
     })
   : null;
 
