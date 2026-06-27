@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { gerarReceitasRecorrentesPendentes } from "@/lib/receitas-recorrentes";
+import { queryKeys } from "@/lib/queryClient";
 
 export interface Transacao {
   id: string;
   user_id: string;
   categoria_id?: string;
-  tipo: 'receita' | 'despesa';
+  tipo: "receita" | "despesa";
   descricao: string;
   valor: number;
   data: string;
@@ -20,99 +22,63 @@ export interface Transacao {
   };
 }
 
+async function fetchTransacoes() {
+  await gerarReceitasRecorrentesPendentes();
+
+  const { data: transacoesData, error: transacoesError } = await supabase
+    .from("transacoes")
+    .select("*, categorias (nome, cor, icone)");
+  if (transacoesError) throw transacoesError;
+
+  const { data: receitasData, error: receitasError } = await supabase
+    .from("receitas")
+    .select("*, categorias (nome, cor, icone)")
+    .eq("recorrente", false);
+  if (receitasError) throw receitasError;
+
+  const { data: despesasData, error: despesasError } = await supabase
+    .from("despesas")
+    .select("*, categorias (nome, cor, icone)");
+  if (despesasError) throw despesasError;
+
+  const allTransacoes = [
+    ...(transacoesData || []).map((t: any) => ({ ...t, tipo: t.tipo })),
+    ...(receitasData || []).map((r: any) => ({ ...r, tipo: "receita" as const })),
+    ...(despesasData || []).map((d: any) => ({ ...d, tipo: "despesa" as const })),
+  ];
+
+  return allTransacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()) as Transacao[];
+}
+
 export const useTransacoes = () => {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: queryKeys.transacoes, queryFn: fetchTransacoes });
 
-  const fetchTransacoes = async () => {
-    try {
-      await gerarReceitasRecorrentesPendentes();
-
-      // Buscar dados da tabela transacoes
-      const { data: transacoesData, error: transacoesError } = await supabase
-        .from('transacoes')
-        .select(`
-          *,
-          categorias (nome, cor, icone)
-        `);
-
-      if (transacoesError) throw transacoesError;
-
-      // Buscar dados da tabela receitas
-      const { data: receitasData, error: receitasError } = await supabase
-        .from('receitas')
-        .select(`
-          *,
-          categorias (nome, cor, icone)
-        `)
-        .eq("recorrente", false);
-
-      if (receitasError) throw receitasError;
-
-      // Buscar dados da tabela despesas
-      const { data: despesasData, error: despesasError } = await supabase
-        .from('despesas')
-        .select(`
-          *,
-          categorias (nome, cor, icone)
-        `);
-
-      if (despesasError) throw despesasError;
-
-      // Combinar todos os dados
-      const allTransacoes = [
-        ...(transacoesData || []).map(t => ({ ...t, tipo: t.tipo })),
-        ...(receitasData || []).map(r => ({ ...r, tipo: 'receita' as const })),
-        ...(despesasData || []).map(d => ({ ...d, tipo: 'despesa' as const }))
-      ];
-
-      // Ordenar por data
-      const sortedTransacoes = allTransacoes.sort((a, b) => 
-        new Date(b.data).getTime() - new Date(a.data).getTime()
-      );
-
-      setTransacoes(sortedTransacoes as Transacao[]);
-    } catch (error: any) {
+  useEffect(() => {
+    if (query.error) {
       toast({
         title: "Erro ao carregar transações",
-        description: error.message,
+        description: (query.error as Error).message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [query.error, toast]);
 
-  const createTransacao = async (transacao: Omit<Transacao, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'categorias'>) => {
+  const createTransacao = async (transacao: Omit<Transacao, "id" | "user_id" | "created_at" | "updated_at" | "categorias">) => {
     try {
       const { data, error } = await supabase
-        .from('transacoes')
-        .insert([{
-          ...transacao,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        }])
-        .select(`
-          *,
-          categorias (nome, cor, icone)
-        `)
+        .from("transacoes")
+        .insert([{ ...transacao, user_id: (await supabase.auth.getUser()).data.user?.id }])
+        .select("*, categorias (nome, cor, icone)")
         .single();
 
       if (error) throw error;
-      setTransacoes(prev => [data as Transacao, ...prev]);
-      
-      toast({
-        title: "Transação criada",
-        description: "Transação criada com sucesso!",
-      });
-      
+      queryClient.setQueryData<Transacao[]>(queryKeys.transacoes, (prev = []) => [data as Transacao, ...prev]);
+      toast({ title: "Transação criada", description: "Transação criada com sucesso!" });
       return { data, error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao criar transação",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao criar transação", description: error.message, variant: "destructive" });
       return { data: null, error };
     }
   };
@@ -120,76 +86,47 @@ export const useTransacoes = () => {
   const updateTransacao = async (id: string, updates: Partial<Transacao>) => {
     try {
       const { data, error } = await supabase
-        .from('transacoes')
+        .from("transacoes")
         .update(updates)
-        .eq('id', id)
-        .select(`
-          *,
-          categorias (nome, cor, icone)
-        `)
+        .eq("id", id)
+        .select("*, categorias (nome, cor, icone)")
         .single();
 
       if (error) throw error;
-      setTransacoes(prev => prev.map(transacao => transacao.id === id ? data as Transacao : transacao));
-      
-      toast({
-        title: "Transação atualizada",
-        description: "Transação atualizada com sucesso!",
-      });
-      
+      queryClient.setQueryData<Transacao[]>(queryKeys.transacoes, (prev = []) =>
+        prev.map((item) => (item.id === id ? (data as Transacao) : item)),
+      );
+      toast({ title: "Transação atualizada", description: "Transação atualizada com sucesso!" });
       return { data, error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar transação",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao atualizar transação", description: error.message, variant: "destructive" });
       return { data: null, error };
     }
   };
 
   const deleteTransacao = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('transacoes')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from("transacoes").delete().eq("id", id);
       if (error) throw error;
-      setTransacoes(prev => prev.filter(transacao => transacao.id !== id));
-      
-      toast({
-        title: "Transação removida",
-        description: "Transação removida com sucesso!",
-      });
-      
+      queryClient.setQueryData<Transacao[]>(queryKeys.transacoes, (prev = []) => prev.filter((item) => item.id !== id));
+      toast({ title: "Transação removida", description: "Transação removida com sucesso!" });
       return { error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao remover transação",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao remover transação", description: error.message, variant: "destructive" });
       return { error };
     }
   };
 
-  useEffect(() => {
-    fetchTransacoes();
-  }, []);
-
-  // Filtros para compatibilidade
-  const receitas = transacoes.filter(t => t.tipo === 'receita');
-  const despesas = transacoes.filter(t => t.tipo === 'despesa');
+  const transacoes = query.data || [];
 
   return {
     transacoes,
-    receitas,
-    despesas,
-    loading,
+    receitas: transacoes.filter((item) => item.tipo === "receita"),
+    despesas: transacoes.filter((item) => item.tipo === "despesa"),
+    loading: query.isLoading,
     createTransacao,
     updateTransacao,
     deleteTransacao,
-    refetch: fetchTransacoes
+    refetch: query.refetch,
   };
 };

@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/queryClient";
 
 export interface CreditCard {
   id: string;
@@ -21,91 +23,55 @@ export interface CreditCard {
   updated_at: string;
 }
 
-type CardCreateInput = Omit<
-  CreditCard,
-  "id" | "user_id" | "created_at" | "updated_at"
->;
-
+type CardCreateInput = Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at">;
 type CardUpdateInput = Partial<CardCreateInput>;
 
+async function fetchCards() {
+  const { data, error } = await supabase.from("cards").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as CreditCard[];
+}
+
 export const useCards = () => {
-  const [cards, setCards] = useState<CreditCard[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: queryKeys.cards, queryFn: fetchCards });
 
-  const fetchCards = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cards")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setCards((data || []) as CreditCard[]);
-    } catch (error: any) {
+  useEffect(() => {
+    if (query.error) {
       toast({
         title: "Erro ao carregar cartões",
-        description: error.message,
+        description: (query.error as Error).message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [query.error, toast]);
 
   const createCard = async (card: CardCreateInput) => {
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
-
-      const { data, error } = await supabase
-        .from("cards")
-        .insert([{ ...card, user_id: userId }])
-        .select("*")
-        .single();
-
+      const { data, error } = await supabase.from("cards").insert([{ ...card, user_id: userId }]).select("*").single();
       if (error) throw error;
-
-      setCards((prev) => [data as CreditCard, ...prev]);
+      queryClient.setQueryData<CreditCard[]>(queryKeys.cards, (prev = []) => [data as CreditCard, ...prev]);
       toast({ title: "Cartão criado", description: "Cartão criado com sucesso!" });
-
       return { data, error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao criar cartão",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao criar cartão", description: error.message, variant: "destructive" });
       return { data: null, error };
     }
   };
 
   const updateCard = async (id: string, updates: CardUpdateInput) => {
     try {
-      const { data, error } = await supabase
-        .from("cards")
-        .update(updates)
-        .eq("id", id)
-        .select("*")
-        .single();
-
+      const { data, error } = await supabase.from("cards").update(updates).eq("id", id).select("*").single();
       if (error) throw error;
-
-      setCards((prev) =>
-        prev.map((item) => (item.id === id ? (data as CreditCard) : item))
+      queryClient.setQueryData<CreditCard[]>(queryKeys.cards, (prev = []) =>
+        prev.map((item) => (item.id === id ? (data as CreditCard) : item)),
       );
-
-      toast({
-        title: "Cartão atualizado",
-        description: "Cartão atualizado com sucesso!",
-      });
-
+      toast({ title: "Cartão atualizado", description: "Cartão atualizado com sucesso!" });
       return { data, error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar cartão",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao atualizar cartão", description: error.message, variant: "destructive" });
       return { data: null, error };
     }
   };
@@ -113,34 +79,22 @@ export const useCards = () => {
   const deleteCard = async (id: string) => {
     try {
       const { error } = await supabase.from("cards").delete().eq("id", id);
-
       if (error) throw error;
-
-      setCards((prev) => prev.filter((item) => item.id !== id));
+      queryClient.setQueryData<CreditCard[]>(queryKeys.cards, (prev = []) => prev.filter((item) => item.id !== id));
       toast({ title: "Cartão removido", description: "Cartão removido com sucesso!" });
-
       return { error: null };
     } catch (error: any) {
-      toast({
-        title: "Erro ao remover cartão",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao remover cartão", description: error.message, variant: "destructive" });
       return { error };
     }
   };
 
-  useEffect(() => {
-    fetchCards();
-  }, []);
-
   return {
-    cards,
-    loading,
+    cards: query.data || [],
+    loading: query.isLoading,
     createCard,
     updateCard,
     deleteCard,
-    refetch: fetchCards,
+    refetch: query.refetch,
   };
 };
-
