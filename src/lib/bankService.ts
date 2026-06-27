@@ -12,7 +12,7 @@ export type BankOption = {
   ispb: string;
 };
 
-const BANKS_CACHE_KEY = "mordomo:banks:v1";
+const BANKS_CACHE_KEY = "localfiny:banks:v1";
 const BANKS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const BANKS_API_URL = "https://brasilapi.com.br/api/banks/v1";
 const BANKS_FETCH_TIMEOUT_MS = 8000;

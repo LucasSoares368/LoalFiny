@@ -43,7 +43,7 @@ const Login = () => {
                 <span className="text-white font-bold text-2xl">M</span>
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Mordomo</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">LocalFiny</h1>
             <p className="text-gray-600 dark:text-slate-300 mt-2">
               {mode === "login" && "Faça login em sua conta"}
               {mode === "register" && "Crie sua conta"}

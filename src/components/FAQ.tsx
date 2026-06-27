@@ -4,8 +4,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const FAQ = () => {
   const faqs = [
     {
-      question: "O Mordomo é gratuito?",
-      answer: "Sim! O Mordomo oferece um plano gratuito completo com recursos essenciais para controle financeiro. Você pode fazer upgrade para planos pagos quando precisar de recursos avançados."
+      question: "O LocalFiny é gratuito?",
+      answer: "Sim! O LocalFiny oferece um plano gratuito completo com recursos essenciais para controle financeiro. Você pode fazer upgrade para planos pagos quando precisar de recursos avançados."
     },
     {
       question: "Como funciona a integração com WhatsApp?",
@@ -35,7 +35,7 @@ export const FAQ = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">PERGUNTAS FREQUENTES</h2>
           <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
-            Tire suas dúvidas sobre o Mordomo
+            Tire suas dúvidas sobre o LocalFiny
           </p>
         </div>
 

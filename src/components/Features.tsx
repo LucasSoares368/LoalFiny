@@ -36,7 +36,7 @@ export const Features = () => {
     },
     {
       icon: MessageCircle,
-      title: "Mordomo no WhatsApp",
+      title: "LocalFiny no WhatsApp",
       description: "Registre receitas e despesas diretamente pelo WhatsApp. Basta enviar uma mensagem para nosso assistente virtual e ele lançará automaticamente em sua conta.",
       color: "orange"
     }
@@ -51,7 +51,7 @@ export const Features = () => {
             Tudo o que você precisa para controlar suas finanças
           </p>
           <p className="text-gray-500 dark:text-slate-400 mt-4">
-            Conheça as principais funcionalidades que tornam o Mordomo a melhor escolha para gerenciar suas finanças pessoais.
+            Conheça as principais funcionalidades que tornam o LocalFiny a melhor escolha para gerenciar suas finanças pessoais.
           </p>
         </div>
         

@@ -8,7 +8,7 @@ export const Footer = () => {
               <div className="bg-orange-500 rounded-lg p-2">
                 <span className="text-white font-bold text-xl">M</span>
               </div>
-              <span className="text-2xl font-bold">Mordomo</span>
+              <span className="text-2xl font-bold">LocalFiny</span>
             </div>
             <p className="text-gray-400 leading-relaxed">A plataforma completa para gerenciar suas finanças pessoais com inteligência.</p>
           </div>
@@ -42,7 +42,7 @@ export const Footer = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5" />
-                <span>contato@mordomo.com</span>
+                <span>contato@localfiny.com</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="w-5 h-5" />
@@ -53,7 +53,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2025 Mordomo. Todos os direitos reservados.</p>
+          <p>&copy; 2025 LocalFiny. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>;

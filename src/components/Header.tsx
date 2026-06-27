@@ -15,7 +15,7 @@ export const Header = () => {
             <div className="bg-orange-500 rounded-lg p-2">
               <span className="text-white font-bold text-xl">M</span>
             </div>
-            <span className="text-2xl font-bold text-gray-800 dark:text-slate-100">Mordomo</span>
+            <span className="text-2xl font-bold text-gray-800 dark:text-slate-100">LocalFiny</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-8">

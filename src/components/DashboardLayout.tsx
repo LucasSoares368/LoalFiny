@@ -130,7 +130,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <span className="text-white font-bold text-xl">M</span>
               </div>
               {!isCollapsed && (
-                <span className="text-xl font-bold text-foreground">Mordomo</span>
+                <span className="text-xl font-bold text-foreground">LocalFiny</span>
               )}
             </div>
 

@@ -24,7 +24,7 @@ export const Hero = () => {
           </h1>
           
           <p className="text-xl text-gray-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
-            O Mordomo é a plataforma completa para gerenciar suas finanças pessoais e empresariais. 
+            O LocalFiny é a plataforma completa para gerenciar suas finanças pessoais e empresariais. 
             Dashboard intuitivo, relatórios detalhados e agora com assistente no WhatsApp.
           </p>
           
@@ -47,8 +47,8 @@ export const Hero = () => {
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 mb-16">
             <img 
-              src="https://cdn.jsdelivr.net/gh/mathuzabr/img-packtypebot/mordomo.jpg" 
-              alt="Dashboard do Mordomo"
+              src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80" 
+              alt="Dashboard do LocalFiny"
               className="w-full h-auto rounded-lg"
             />
           </div>
@@ -88,4 +88,3 @@ export const Hero = () => {
     </section>
   );
 };
-
