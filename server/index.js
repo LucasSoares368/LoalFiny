@@ -3,10 +3,12 @@ import express from "express";
 import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import { pool, query } from "./db.js";
 import {
@@ -24,6 +26,21 @@ const PORT = Number(process.env.PORT || 3001);
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "";
 const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads"));
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+
+const mailer = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: process.env.SMTP_USER
+        ? {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          }
+        : undefined,
+    })
+  : null;
 
 fs.mkdirSync(uploadRoot, { recursive: true });
 
@@ -52,6 +69,48 @@ function publicUser(user) {
       telefone: user.telefone,
     },
   };
+}
+
+async function sendPasswordResetEmail(user, resetUrl) {
+  if (!mailer) {
+    const error = new Error("SMTP nao configurado");
+    error.status = 500;
+    throw error;
+  }
+
+  const appName = process.env.APP_NAME || "LocalFiny";
+  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+  await mailer.sendMail({
+    from: `${appName} <${from}>`,
+    to: user.email,
+    subject: `Redefina sua senha no ${appName}`,
+    text: [
+      `Ola${user.name ? `, ${user.name}` : ""}.`,
+      "",
+      `Recebemos uma solicitacao para redefinir sua senha no ${appName}.`,
+      `Acesse o link abaixo para criar uma nova senha:`,
+      "",
+      resetUrl,
+      "",
+      "Este link expira em 1 hora. Se voce nao solicitou esta alteracao, ignore este email.",
+    ].join("\n"),
+    html: `
+      <div style="margin:0;background:#f8fafc;padding:32px;font-family:Arial,sans-serif;color:#0f172a">
+        <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:18px;padding:32px;border:1px solid #e2e8f0">
+          <h1 style="margin:0 0 12px;font-size:24px;color:#0f172a">Redefina sua senha</h1>
+          <p style="margin:0 0 20px;line-height:1.6;color:#475569">
+            Recebemos uma solicitação para redefinir sua senha no <strong>${appName}</strong>.
+          </p>
+          <a href="${resetUrl}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-weight:700;border-radius:12px;padding:14px 22px">
+            Criar nova senha
+          </a>
+          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#64748b">
+            Este link expira em 1 hora. Se você não solicitou esta alteração, ignore este email.
+          </p>
+        </div>
+      </div>
+    `,
+  });
 }
 
 async function authRequired(req, res, next) {
@@ -301,19 +360,62 @@ app.get("/api/auth/me", authRequired, (req, res) => {
   res.json({ user, session: { user } });
 });
 
-app.post("/api/auth/update-password", authRequired, async (req, res) => {
+app.post("/api/auth/update-password", async (req, res) => {
   try {
-    const { password } = req.body;
+    const { password, token } = req.body;
     if (!password || password.length < 6) return res.status(400).json({ error: "Senha invalida" });
-    await query("update users set password_hash = ? where id = ?", [await bcrypt.hash(password, 12), req.user.id]);
+
+    if (token) {
+      const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+      const rows = await query(
+        "select * from users where reset_token_hash = ? and reset_token_expires_at > now() limit 1",
+        [tokenHash],
+      );
+      const user = rows[0];
+      if (!user) return res.status(400).json({ error: "Link de redefinicao invalido ou expirado" });
+      await query(
+        "update users set password_hash = ?, reset_token_hash = null, reset_token_expires_at = null where id = ?",
+        [await bcrypt.hash(password, 12), user.id],
+      );
+      return res.json({ ok: true });
+    }
+
+    const header = req.headers.authorization || "";
+    const jwtToken = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!jwtToken) return res.status(401).json({ error: "Nao autenticado" });
+    const payload = jwt.verify(jwtToken, JWT_SECRET);
+    await query("update users set password_hash = ? where id = ?", [await bcrypt.hash(password, 12), payload.sub]);
     res.json({ ok: true });
   } catch (error) {
     handleError(res, error);
   }
 });
 
-app.post("/api/auth/reset-password", (_req, res) => {
-  res.json({ ok: true, message: "Redefinicao por email ainda nao configurada no backend MySQL." });
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, redirectTo } = req.body;
+    if (!email) return res.status(400).json({ error: "Email e obrigatorio" });
+
+    const rows = await query("select * from users where email = ? limit 1", [email]);
+    const user = rows[0];
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      await query(
+        "update users set reset_token_hash = ?, reset_token_expires_at = date_add(now(), interval 1 hour) where id = ?",
+        [tokenHash, user.id],
+      );
+      const baseUrl = redirectTo || `${PUBLIC_BASE_URL}/login?type=recovery`;
+      const resetUrl = new URL(baseUrl);
+      resetUrl.searchParams.set("type", "recovery");
+      resetUrl.searchParams.set("token", token);
+      await sendPasswordResetEmail(user, resetUrl.toString());
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    handleError(res, error);
+  }
 });
 
 app.post("/api/db/:table", authRequired, async (req, res) => {

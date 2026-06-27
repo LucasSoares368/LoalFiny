@@ -6,6 +6,8 @@ create table if not exists users (
   name varchar(255) null,
   organization_name varchar(255) null,
   telefone varchar(50) null,
+  reset_token_hash varchar(64) null,
+  reset_token_expires_at datetime null,
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp on update current_timestamp
 ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;

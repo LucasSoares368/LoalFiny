@@ -263,18 +263,19 @@ export const supabase = {
       return { error: null };
     },
 
-    async resetPasswordForEmail(email: string) {
+    async resetPasswordForEmail(email: string, options: { redirectTo?: string } = {}) {
       return apiFetch("/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, redirectTo: options.redirectTo }),
       });
     },
 
     async updateUser(updates: { password?: string }) {
       if (!updates.password) return { data: null, error: null };
+      const token = new URLSearchParams(window.location.search).get("token");
       return apiFetch("/auth/update-password", {
         method: "POST",
-        body: JSON.stringify({ password: updates.password }),
+        body: JSON.stringify({ password: updates.password, token }),
       });
     },
   },
