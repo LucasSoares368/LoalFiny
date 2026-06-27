@@ -104,6 +104,17 @@ function buildWhere(table, filters, userId, params) {
         clauses.push(`${column} in (${values.map(() => "?").join(", ")})`);
         params.push(...values);
       }
+    } else if (op === "is") {
+      if (value === null) {
+        clauses.push(`${column} is null`);
+      } else if (value === true) {
+        clauses.push(`${column} is true`);
+      } else if (value === false) {
+        clauses.push(`${column} is false`);
+      } else {
+        clauses.push(`${column} = ?`);
+        params.push(value);
+      }
     } else {
       const err = new Error(`Operador nao permitido: ${op}`);
       err.status = 400;
