@@ -97,13 +97,13 @@ const Login = () => {
             <div className="mb-10">
               <h2 className="text-4xl font-bold tracking-normal text-slate-950">
                 {isLogin && "Bem-vindo de volta"}
-                {isRegister && "Crie sua conta"}
+                {isRegister && "Bem-vindo de volta"}
                 {mode === "forgot-password" && "Recupere sua senha"}
                 {mode === "reset-password" && "Defina sua nova senha"}
               </h2>
               <p className="mt-3 max-w-md text-lg leading-7 text-slate-600">
                 {isLogin && "Acesse seu painel e continue organizando sua vida financeira."}
-                {isRegister && "Comece a controlar sua rotina financeira com mais clareza."}
+                {isRegister && "Gerencie suas finanças com a plataforma mais moderna para sua rotina."}
                 {mode === "forgot-password" && "Informe seu email para receber as instruções de recuperação."}
                 {mode === "reset-password" && "Escolha uma nova senha segura para sua conta."}
               </p>
