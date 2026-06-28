@@ -283,9 +283,11 @@ const EmptyState = ({
 const EmptyWalletPage = ({
   kind,
   onAction,
+  periodControl,
 }: {
   kind: "accounts" | "cards";
   onAction: () => void;
+  periodControl?: React.ReactNode;
 }) => {
   const isAccounts = kind === "accounts";
   const Icon = isAccounts ? Landmark : CreditCard;
@@ -311,10 +313,13 @@ const EmptyWalletPage = ({
               <p className="text-base text-slate-500 dark:text-slate-400 sm:text-lg">{subtitle}</p>
             </div>
           </div>
-          <Button onClick={onAction} className="h-12 w-full rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00] sm:w-auto">
-            <Plus className="mr-2 h-5 w-5" />
-            {newLabel}
-          </Button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            {periodControl}
+            <Button onClick={onAction} className="h-12 w-full rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00] sm:w-auto">
+              <Plus className="mr-2 h-5 w-5" />
+              {newLabel}
+            </Button>
+          </div>
         </div>
 
         <div className="relative mb-20 max-w-xl">
@@ -967,11 +972,54 @@ const Carteira = () => {
   };
 
   const pageTitle = isCardsTab ? "Meus Cart\u00f5es" : "Meus Bancos";
+  const hasWalletItems = isCardsTab ? cardsWithUsage.length > 0 : accounts.length > 0;
+  const activeSectionTitle = isCardsTab ? "Cart\u00f5es Pessoais" : "Bancos Pessoais";
+  const activeSectionSubtitle = isCardsTab ? "Gerencie seus cart\u00f5es pessoais" : "Gerencie suas contas pessoais";
+  const activeNewLabel = isCardsTab ? "Novo Cart\u00e3o" : "Novo Banco";
+  const periodControl = (
+    <div className="flex h-12 w-full items-center justify-between gap-1 rounded-2xl border border-slate-200 bg-white/80 px-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:w-auto">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-xl"
+        onClick={() => navegarMes(-1)}
+        aria-label="Mes anterior"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-9 min-w-[132px] px-3 text-sm font-semibold text-slate-900 dark:text-slate-100"
+            aria-label="Selecionar mes no calendario"
+          >
+            {mesReferenciaLabel}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="center">
+          <MonthYearCalendarPicker value={mesReferencia} onSelect={aplicarMesReferencia} />
+        </PopoverContent>
+      </Popover>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-xl"
+        onClick={() => navegarMes(1)}
+        aria-label="Proximo mes"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   return (
     <DashboardLayout>
       <div className="min-h-[calc(100vh-1px)] bg-slate-50 dark:bg-[#0D1B2A]">
-        <header className="flex min-h-[70px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <header className="flex min-h-[88px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-xl">
               <Menu className="h-5 w-5" />
@@ -1074,10 +1122,34 @@ const Carteira = () => {
               </TabsTrigger>
             </TabsList>
           </div>
+          {hasWalletItems ? (
+            <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
+                  <UserRound className="h-6 w-6" />
+                </span>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-normal text-slate-950 dark:text-slate-100 sm:text-3xl">
+                    {activeSectionTitle}
+                  </h2>
+                  <p className="text-base text-slate-500 dark:text-slate-400 sm:text-lg">
+                    {activeSectionSubtitle}
+                  </p>
+                </div>
+              </div>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                {periodControl}
+                <Button onClick={openCreateDialog} className="h-12 w-full rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00] sm:w-auto">
+                  <Plus className="mr-2 h-5 w-5" />
+                  {activeNewLabel}
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {isCardsTab ? (
           <>
             {cardsWithUsage.length === 0 ? (
-              <EmptyWalletPage kind="cards" onAction={openCreateDialog} />
+              <EmptyWalletPage kind="cards" onAction={openCreateDialog} periodControl={periodControl} />
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
@@ -1240,7 +1312,7 @@ const Carteira = () => {
             {accounts.length > 0 ? <div className="h-8" /> : null}
             <div>
               {accounts.length === 0 ? (
-                <EmptyWalletPage kind="accounts" onAction={openCreateDialog} />
+                <EmptyWalletPage kind="accounts" onAction={openCreateDialog} periodControl={periodControl} />
              ) : (
                 <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
