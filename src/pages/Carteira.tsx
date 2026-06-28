@@ -52,6 +52,7 @@ import {
   Edit,
   Landmark,
   Loader2,
+  Menu,
   Plus,
   Search,
   Trash,
@@ -298,19 +299,19 @@ const EmptyWalletPage = ({
   const actionLabel = isAccounts ? "Cadastrar Primeiro Banco" : "Cadastrar Primeiro Cartão";
   const newLabel = isAccounts ? "Novo Banco" : "Novo Cartão";
   return (
-    <div className="space-y-9">
-      <section>
+    <div className="space-y-8">
+      <section className="py-7">
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
               <UserRound className="h-6 w-6" />
             </span>
             <div>
-              <h2 className="text-3xl font-bold tracking-normal text-slate-950 dark:text-slate-100">{title}</h2>
-              <p className="text-lg text-slate-500 dark:text-slate-400">{subtitle}</p>
+              <h2 className="text-2xl font-bold tracking-normal text-slate-950 dark:text-slate-100 sm:text-3xl">{title}</h2>
+              <p className="text-base text-slate-500 dark:text-slate-400 sm:text-lg">{subtitle}</p>
             </div>
           </div>
-          <Button onClick={onAction} className="h-12 rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00]">
+          <Button onClick={onAction} className="h-12 w-full rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00] sm:w-auto">
             <Plus className="mr-2 h-5 w-5" />
             {newLabel}
           </Button>
@@ -319,17 +320,17 @@ const EmptyWalletPage = ({
         <div className="relative mb-20 max-w-xl">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
           <Input
-            className="h-12 rounded-2xl border-slate-200 bg-white pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900"
+            className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900"
             placeholder={searchPlaceholder}
             readOnly
           />
         </div>
 
-        <div className="flex min-h-[300px] items-start justify-center">
+        <div className="flex min-h-[360px] items-start justify-center pt-2 sm:pt-8">
           <div className="text-center">
-            <Icon className="mx-auto mb-5 h-20 w-20 text-slate-300" strokeWidth={1.6} />
-            <h3 className="text-2xl font-bold text-slate-950 dark:text-slate-100">{emptyTitle}</h3>
-            <p className="mt-4 text-xl text-slate-500 dark:text-slate-400">{emptyDescription}</p>
+            <Icon className="mx-auto mb-6 h-20 w-20 text-slate-300 dark:text-slate-600" strokeWidth={1.6} />
+            <h3 className="text-xl font-bold text-slate-950 dark:text-slate-100 sm:text-2xl">{emptyTitle}</h3>
+            <p className="mt-4 text-base text-slate-500 dark:text-slate-400 sm:text-xl">{emptyDescription}</p>
             <Button onClick={onAction} className="mt-6 h-12 rounded-2xl bg-[#FF6A00] px-8 text-base font-bold hover:bg-[#e85f00]">
               <Plus className="mr-2 h-5 w-5" />
               {actionLabel}
@@ -965,10 +966,40 @@ const Carteira = () => {
     resetAccountForm();
   };
 
+  const pageTitle = isCardsTab ? "Meus Cart\u00f5es" : "Meus Bancos";
+
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="mb-0 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="min-h-[calc(100vh-1px)] bg-slate-50 dark:bg-[#0D1B2A]">
+        <header className="flex min-h-[70px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-xl">
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
+            <h1 className="truncate text-2xl font-bold text-slate-950 dark:text-slate-100">
+              {pageTitle}
+            </h1>
+          </div>
+
+          <div className="grid h-14 w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400 sm:w-[330px]">
+            <button
+              type="button"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#FF6A00] text-white shadow-sm"
+            >
+              <UserRound className="h-4 w-4" />
+              Pessoal
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-center gap-2 rounded-xl"
+            >
+              <Building2 className="h-4 w-4" />
+              Empresarial
+            </button>
+          </div>
+        </header>
+        <div className="hidden">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 md:text-4xl">
@@ -1031,7 +1062,7 @@ const Carteira = () => {
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "cards" | "accounts")}
-          className="space-y-0"
+          className="space-y-0 px-4 py-4 sm:px-6 lg:px-8"
         >
           <div className="flex items-center justify-start mt-4 mb-6">
             <TabsList className="w-full grid grid-cols-2 sm:w-auto sm:inline-flex">
