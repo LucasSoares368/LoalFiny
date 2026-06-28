@@ -1231,8 +1231,8 @@ const Carteira = () => {
                 iconClassName="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300"
               />
               <WalletSummaryCard icon={Wallet} label="Contas" value={String(accountsKpis.accountsCount)} hint="Ativas" iconClassName="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300" />
-              <WalletSummaryCard icon={Building2} label="Maior Saldo" value={accountsKpis.highest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.highest.id] || 0)) : "-"} hint={accountsKpis.highest.name || "Sem conta"} iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" />
-              <WalletSummaryCard icon={Building2} label="Menor Saldo" value={accountsKpis.lowest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.lowest.id] || 0)) : "-"} hint={accountsKpis.lowest.name || "Sem conta"} iconClassName="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" />
+              <WalletSummaryCard icon={Building2} label="Maior Saldo" value={accountsKpis.highest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.highest.id] || 0)) : "-"} hint={accountsKpis.highest?.name || "Sem conta"} iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" />
+              <WalletSummaryCard icon={Building2} label="Menor Saldo" value={accountsKpis.lowest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.lowest.id] || 0)) : "-"} hint={accountsKpis.lowest?.name || "Sem conta"} iconClassName="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" />
             </div>
             {accounts.length > 0 ? <div className="h-8" /> : null}
             <div>
