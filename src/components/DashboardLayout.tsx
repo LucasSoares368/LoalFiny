@@ -36,7 +36,7 @@ const menuGroups = [
     label: "Principal",
     items: [
       { icon: Home, label: "Dashboard", path: "/dashboard" },
-      { icon: Wallet, label: "Bancos", path: "/carteira" },
+      { icon: Wallet, label: "Carteira", path: "/carteira" },
       { icon: FileText, label: "Transações", path: "/transacoes" },
       { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
     ],
