@@ -1019,7 +1019,7 @@ const Carteira = () => {
   return (
     <DashboardLayout>
       <div className="min-h-[calc(100vh-1px)] bg-slate-50 dark:bg-[#0D1B2A]">
-        <header className="flex min-h-[88px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <header className="flex min-h-[72px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:h-16 sm:min-h-16 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
           <div className="flex min-w-0 items-center gap-4">
             <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-xl">
               <Menu className="h-5 w-5" />
