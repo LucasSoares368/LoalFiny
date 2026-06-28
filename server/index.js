@@ -52,6 +52,103 @@ app.use(express.json({ limit: "10mb" }));
 app.use("/uploads", express.static(uploadRoot));
 
 const upload = multer({ dest: uploadRoot, limits: { fileSize: 5 * 1024 * 1024 } });
+const marketQuoteCacheTtlMs = Number(process.env.MARKET_QUOTES_CACHE_TTL_MS || 60000);
+let marketQuoteCache = null;
+
+const marketQuoteSymbols = [
+  { symbol: "USDBRL=X", label: "Dólar", type: "currency", currency: "BRL" },
+  { symbol: "EURBRL=X", label: "Euro", type: "currency", currency: "BRL" },
+  { symbol: "GBPBRL=X", label: "Libra", type: "currency", currency: "BRL" },
+  { symbol: "ARSBRL=X", label: "Peso Argentino", type: "currency", currency: "BRL", maximumFractionDigits: 5 },
+  { symbol: "^BVSP", label: "Ibovespa", type: "index" },
+  { symbol: "^GSPC", label: "S&P 500", type: "index" },
+  { symbol: "^IXIC", label: "Nasdaq", type: "index" },
+  { symbol: "GC=F", label: "Ouro", type: "commodity", currency: "USD" },
+  { symbol: "CL=F", label: "Petróleo", type: "commodity", currency: "USD" },
+  { symbol: "BTC-USD", label: "Bitcoin", type: "crypto", currency: "USD" },
+  { symbol: "ETH-USD", label: "Ethereum", type: "crypto", currency: "USD" },
+];
+
+async function fetchYahooChartQuote(config) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(config.symbol)}?range=5d&interval=1d`,
+      {
+        signal: controller.signal,
+        headers: {
+          "user-agent": "Mozilla/5.0 LocalFiny/1.0",
+          accept: "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) throw new Error(`Yahoo Finance respondeu ${response.status}`);
+
+    const payload = await response.json();
+    const result = payload.chart?.result?.[0];
+    const meta = result?.meta;
+    const quotes = result?.indicators?.quote?.[0];
+    const closes = (quotes?.close || []).filter((value) => Number.isFinite(value));
+    const current = Number(meta?.regularMarketPrice ?? closes.at(-1));
+    const previous = Number(meta?.chartPreviousClose ?? closes.at(-2));
+
+    if (!Number.isFinite(current)) throw new Error(`Cotacao indisponivel para ${config.symbol}`);
+
+    const changePercent = Number.isFinite(previous) && previous !== 0
+      ? ((current - previous) / previous) * 100
+      : null;
+
+    return {
+      symbol: config.symbol,
+      label: config.label,
+      type: config.type,
+      currency: config.currency || meta?.currency || null,
+      value: current,
+      previousClose: Number.isFinite(previous) ? previous : null,
+      changePercent,
+      maximumFractionDigits: config.maximumFractionDigits || null,
+      updatedAt: meta?.regularMarketTime
+        ? new Date(meta.regularMarketTime * 1000).toISOString()
+        : new Date().toISOString(),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getMarketQuotes() {
+  const now = Date.now();
+  if (marketQuoteCache && now - marketQuoteCache.fetchedAt < marketQuoteCacheTtlMs) {
+    return { ...marketQuoteCache.payload, cached: true };
+  }
+
+  const settled = await Promise.allSettled(marketQuoteSymbols.map(fetchYahooChartQuote));
+  const quotes = settled
+    .map((result) => (result.status === "fulfilled" ? result.value : null))
+    .filter(Boolean);
+  const errors = settled
+    .map((result, index) => (result.status === "rejected" ? `${marketQuoteSymbols[index].label}: ${result.reason.message}` : null))
+    .filter(Boolean);
+
+  if (!quotes.length) {
+    const error = new Error(errors[0] || "Nao foi possivel carregar indicadores de mercado");
+    error.status = 502;
+    throw error;
+  }
+
+  const payload = {
+    quotes,
+    errors,
+    provider: "Yahoo Finance",
+    fetchedAt: new Date(now).toISOString(),
+    cacheTtlMs: marketQuoteCacheTtlMs,
+  };
+  marketQuoteCache = { fetchedAt: now, payload };
+  return { ...payload, cached: false };
+}
 
 function signToken(user) {
   return jwt.sign(
@@ -322,6 +419,14 @@ async function upsertRows(table, body, userId) {
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/market/quotes", async (_req, res) => {
+  try {
+    res.json(await getMarketQuotes());
+  } catch (error) {
+    handleError(res, error);
+  }
 });
 
 app.post("/api/auth/signup", async (req, res) => {

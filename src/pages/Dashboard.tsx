@@ -22,11 +22,35 @@ import { Card } from "@/components/ui/card";
 import { useTransacoes } from "@/hooks/useTransacoes";
 import { useProfile } from "@/hooks/useProfile";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { MarketQuote, useMarketQuotes } from "@/hooks/useMarketQuotes";
 
 type Period = "dia" | "semana" | "mes" | "ano";
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const formatMarketValue = (quote: MarketQuote) => {
+  if (quote.type === "index") {
+    return quote.value.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  }
+
+  const currency = quote.currency === "USD" ? "USD" : "BRL";
+  return quote.value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: quote.maximumFractionDigits ?? 2,
+    maximumFractionDigits: quote.maximumFractionDigits ?? (quote.value < 10 ? 3 : 2),
+  });
+};
+
+const formatMarketChange = (changePercent: number | null) => {
+  if (changePercent === null) return "0,00%";
+  const sign = changePercent > 0 ? "+" : "";
+  return `${sign}${changePercent.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+};
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -72,6 +96,7 @@ const Dashboard = () => {
   const { transacoes, loading: loadingTransacoes } = useTransacoes();
   const { accounts } = useBankAccounts();
   const { profile } = useProfile();
+  const marketQuotes = useMarketQuotes();
 
   const data = useMemo(() => {
     const start = getPeriodStart(period);
@@ -115,21 +140,7 @@ const Dashboard = () => {
     <DashboardLayout>
       <div className="min-h-screen px-5 py-5 md:px-8">
         <header className="mb-7 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
-            {[
-              ["Libra", "R$ 6.83", "+0.53%"],
-              ["Peso Arg.", "R$ 284.93", "+0.72%"],
-              ["Ibovespa", "128.953", "+0.36%"],
-              ["S&P 500", "5.442", "+0.38%"],
-              ["Bitcoin", "$ 68.325", "+1.32%"],
-            ].map(([label, value, change]) => (
-              <div key={label} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
-                <span className="mr-2 text-[10px] text-slate-400">{label}</span>
-                {value}
-                <span className="ml-2 rounded-full bg-[#FF6A00]/10 px-1.5 py-0.5 text-[10px] text-[#FF6A00]">{change}</span>
-              </div>
-            ))}
-          </div>
+          <MarketTicker quotes={marketQuotes.data?.quotes || []} isLoading={marketQuotes.isLoading} />
 
           <div className="flex items-center gap-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
             <Button className="h-9 rounded-xl bg-[#FF6A00] px-5 text-sm font-bold hover:bg-[#e85f00]">
@@ -305,6 +316,39 @@ const Dashboard = () => {
         </div>
       </div>
     </DashboardLayout>
+  );
+};
+
+const MarketTicker = ({ quotes, isLoading }: { quotes: MarketQuote[]; isLoading: boolean }) => {
+  if (isLoading && !quotes.length) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-9 w-28 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-slate-200" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex max-w-full flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+      {quotes.map((quote) => {
+        const positive = (quote.changePercent || 0) >= 0;
+        return (
+          <div key={quote.symbol} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
+            <span className="mr-2 text-[10px] text-slate-400">{quote.label}</span>
+            {formatMarketValue(quote)}
+            <span
+              className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${
+                positive ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-red-50 text-red-500"
+              }`}
+            >
+              {formatMarketChange(quote.changePercent)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 };
 

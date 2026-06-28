@@ -19,5 +19,6 @@ export const queryKeys = {
   despesas: ["financial", "despesas"] as const,
   bankAccounts: ["financial", "bank_accounts"] as const,
   cards: ["financial", "cards"] as const,
+  marketQuotes: ["market", "quotes"] as const,
   profile: (userId?: string) => ["profile", userId || "anonymous"] as const,
 };
