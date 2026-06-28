@@ -29,6 +29,8 @@ type Period = "dia" | "semana" | "mes" | "ano";
 const formatCurrency = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const percentOfTotal = (value: number, total: number) => (total > 0 ? (value / total) * 100 : 0);
+
 const formatMarketValue = (quote: MarketQuote) => {
   if (quote.type === "index") {
     return quote.value.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
@@ -139,8 +141,10 @@ const Dashboard = () => {
   const savingsRate = data.receitas > 0 ? Math.max(0, (data.saldo / data.receitas) * 100) : 0;
   const userName = profile?.name || "Usuário";
 
-  const distributionIncome = data.receitas > 0 ? 100 : 50;
-  const distributionExpense = data.despesas > 0 ? 100 : 50;
+  const businessIncome = 0;
+  const businessExpense = 0;
+  const totalIncomeDistribution = data.receitas + businessIncome;
+  const totalExpenseDistribution = data.despesas + businessExpense;
 
   return (
     <DashboardLayout>
@@ -210,8 +214,21 @@ const Dashboard = () => {
         <div className="mb-5 grid gap-5 lg:grid-cols-3">
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={BarChart3} title="Distribuição financeira" subtitle="Comparativo entre perfil pessoal e empresarial" />
-            <Distribution label="Distribuição de receitas" value={distributionIncome} amount={data.receitas} />
-            <Distribution label="Distribuição de despesas" value={distributionExpense} amount={data.despesas} danger />
+            <Distribution
+              label="Distribuição de receitas"
+              personalAmount={data.receitas}
+              businessAmount={businessIncome}
+              personalPercent={percentOfTotal(data.receitas, totalIncomeDistribution)}
+              businessPercent={percentOfTotal(businessIncome, totalIncomeDistribution)}
+            />
+            <Distribution
+              label="Distribuição de despesas"
+              personalAmount={data.despesas}
+              businessAmount={businessExpense}
+              personalPercent={percentOfTotal(data.despesas, totalExpenseDistribution)}
+              businessPercent={percentOfTotal(businessExpense, totalExpenseDistribution)}
+              danger
+            />
           </Card>
 
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
@@ -471,23 +488,52 @@ const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: 
   );
 };
 
-const Distribution = ({ label, value, amount, danger = false }: { label: string; value: number; amount: number; danger?: boolean }) => (
-  <div className="mt-5">
-    <p className={`mb-2 text-sm font-semibold ${danger ? "text-red-500" : "text-[#FF6A00]"}`}>{label}</p>
-    <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">
-      <div className="bg-[#FF6A00] text-center text-[10px] font-bold text-white" style={{ width: `${value / 2}%` }}>
-        50%
+const Distribution = ({
+  label,
+  personalAmount,
+  businessAmount,
+  personalPercent,
+  businessPercent,
+  danger = false,
+}: {
+  label: string;
+  personalAmount: number;
+  businessAmount: number;
+  personalPercent: number;
+  businessPercent: number;
+  danger?: boolean;
+}) => {
+  const hasValues = personalAmount + businessAmount > 0;
+  const personalLabel = `${Math.round(personalPercent)}%`;
+  const businessLabel = `${Math.round(businessPercent)}%`;
+
+  return (
+    <div className="mt-5">
+      <p className={`mb-2 text-sm font-semibold ${danger ? "text-red-500" : "text-[#FF6A00]"}`}>{label}</p>
+      <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`${danger ? "bg-red-500" : "bg-[#FF6A00]"} text-center text-[10px] font-bold text-white transition-all`}
+          style={{ width: `${personalPercent}%` }}
+        >
+          {personalPercent >= 12 ? personalLabel : ""}
+        </div>
+        <div
+          className="bg-[#0D1B2A]/50 text-center text-[10px] font-bold text-white transition-all"
+          style={{ width: `${businessPercent}%` }}
+        >
+          {businessPercent >= 12 ? businessLabel : ""}
+        </div>
+        {!hasValues ? (
+          <div className="flex flex-1 items-center justify-center text-[10px] font-bold text-slate-400">0%</div>
+        ) : null}
       </div>
-      <div className="bg-[#0D1B2A]/50 text-center text-[10px] font-bold text-white" style={{ width: `${100 - value / 2}%` }}>
-        50%
+      <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
+        <span>Pessoal: {formatCurrency(personalAmount)} {personalPercent > 0 && personalPercent < 12 ? `(${personalLabel})` : ""}</span>
+        <span>Empresarial: {formatCurrency(businessAmount)} {businessPercent > 0 && businessPercent < 12 ? `(${businessLabel})` : ""}</span>
       </div>
     </div>
-    <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
-      <span>Pessoal: {formatCurrency(amount)}</span>
-      <span>Empresarial: {formatCurrency(0)}</span>
-    </div>
-  </div>
-);
+  );
+};
 
 const SummaryPill = ({ label, value, tone }: { label: string; value: number; tone: "orange" | "red" }) => (
   <div className={`rounded-2xl p-4 text-center ${tone === "red" ? "bg-red-50 text-red-500" : "bg-[#FF6A00]/10 text-[#FF6A00]"}`}>
