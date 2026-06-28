@@ -74,18 +74,18 @@ const getPeriodStart = (period: Period) => {
   return firstDayOfMonth();
 };
 
-const currentDateLabel = () =>
+const currentDateLabel = (date = new Date()) =>
   new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
-  }).format(new Date());
+  }).format(date);
 
-const currentTimeLabel = () =>
+const currentTimeLabel = (date = new Date()) =>
   new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date());
+  }).format(date);
 
 const monthLabel = () =>
   new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date()).replace(/^\w/, (c) => c.toUpperCase());
@@ -93,10 +93,16 @@ const monthLabel = () =>
 const Dashboard = () => {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>("mes");
+  const [now, setNow] = useState(() => new Date());
   const { transacoes, loading: loadingTransacoes } = useTransacoes();
   const { accounts } = useBankAccounts();
   const { profile } = useProfile();
   const marketQuotes = useMarketQuotes();
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const data = useMemo(() => {
     const start = getPeriodStart(period);
@@ -170,9 +176,9 @@ const Dashboard = () => {
           <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-500">
             <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">
               <Calendar className="h-4 w-4" />
-              {currentDateLabel()}
+              {currentDateLabel(now)}
             </span>
-            <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">{currentTimeLabel()}</span>
+            <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">{currentTimeLabel(now)}</span>
             <Eye className="h-4 w-4" />
           </div>
         </div>
