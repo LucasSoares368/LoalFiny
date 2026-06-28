@@ -54,7 +54,6 @@ import {
   Loader2,
   Plus,
   Search,
-  TriangleAlert,
   Trash,
   Trash2,
   UserRound,
@@ -282,13 +281,9 @@ const EmptyState = ({
 
 const EmptyWalletPage = ({
   kind,
-  count,
-  limit,
   onAction,
 }: {
   kind: "accounts" | "cards";
-  count: number;
-  limit: number;
   onAction: () => void;
 }) => {
   const isAccounts = kind === "accounts";
@@ -302,31 +297,8 @@ const EmptyWalletPage = ({
     : "Comece cadastrando seu primeiro cartão pessoal";
   const actionLabel = isAccounts ? "Cadastrar Primeiro Banco" : "Cadastrar Primeiro Cartão";
   const newLabel = isAccounts ? "Novo Banco" : "Novo Cartão";
-  const nearLimitLabel = isAccounts ? "Quase no limite de bancos" : "Quase no limite de cartões";
-  const usageLabel = isAccounts
-    ? `Você está usando ${count} de ${limit} bancos.`
-    : `Você está usando ${count} de ${limit} cartões.`;
-
   return (
     <div className="space-y-9">
-      <Card className="rounded-2xl border border-slate-200 bg-white/70 px-5 py-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex items-start gap-4">
-            <TriangleAlert className="mt-0.5 h-5 w-5 text-slate-900 dark:text-slate-100" />
-            <div>
-              <p className="text-lg font-semibold text-slate-950 dark:text-slate-100">{nearLimitLabel}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-base text-slate-950 dark:text-slate-100">
-                <span>{usageLabel}</span>
-                <Button variant="outline" className="h-11 rounded-2xl px-5 font-semibold">
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Fazer Upgrade
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       <section>
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -1074,7 +1046,7 @@ const Carteira = () => {
           {isCardsTab ? (
           <>
             {cardsWithUsage.length === 0 ? (
-              <EmptyWalletPage kind="cards" count={cardsWithUsage.length} limit={2} onAction={openCreateDialog} />
+              <EmptyWalletPage kind="cards" onAction={openCreateDialog} />
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
@@ -1237,7 +1209,7 @@ const Carteira = () => {
             {accounts.length > 0 ? <div className="h-8" /> : null}
             <div>
               {accounts.length === 0 ? (
-                <EmptyWalletPage kind="accounts" count={accounts.length} limit={2} onAction={openCreateDialog} />
+                <EmptyWalletPage kind="accounts" onAction={openCreateDialog} />
              ) : (
                 <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
