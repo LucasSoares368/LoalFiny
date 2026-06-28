@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Calendar,
@@ -198,7 +198,7 @@ const Dashboard = () => {
         <div className="mb-5 grid gap-4 md:grid-cols-3">
           <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="orange" />
           <MiniMetric title="Despesas pessoal" value={data.despesas} icon={TrendingDown} tone="red" />
-          <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="sky" />
+          <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="navy" />
         </div>
 
         <div className="mb-5 grid gap-5 lg:grid-cols-3">
@@ -320,34 +320,120 @@ const Dashboard = () => {
 };
 
 const MarketTicker = ({ quotes, isLoading }: { quotes: MarketQuote[]; isLoading: boolean }) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const animationRef = useRef<number>();
+  const resumeTimeoutRef = useRef<number>();
+  const pausedRef = useRef(false);
+  const draggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollRef = useRef(0);
+
+  const pause = () => {
+    pausedRef.current = true;
+    if (resumeTimeoutRef.current) window.clearTimeout(resumeTimeoutRef.current);
+  };
+
+  const resumeSoon = (delay = 2500) => {
+    if (resumeTimeoutRef.current) window.clearTimeout(resumeTimeoutRef.current);
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      pausedRef.current = false;
+    }, delay);
+  };
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller || quotes.length < 2) return undefined;
+
+    const tick = () => {
+      if (!pausedRef.current && scroller.scrollWidth > scroller.clientWidth) {
+        scroller.scrollLeft += 0.45;
+        const loopPoint = scroller.scrollWidth / 2;
+        if (scroller.scrollLeft >= loopPoint) {
+          scroller.scrollLeft -= loopPoint;
+        }
+      }
+      animationRef.current = window.requestAnimationFrame(tick);
+    };
+
+    animationRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
+      if (resumeTimeoutRef.current) window.clearTimeout(resumeTimeoutRef.current);
+    };
+  }, [quotes.length]);
+
   if (isLoading && !quotes.length) {
     return (
-      <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+      <div className="flex w-full min-w-0 flex-nowrap items-center gap-3 overflow-hidden text-xs font-bold text-slate-600 lg:flex-1">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-9 w-28 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-slate-200" />
+          <div key={index} className="h-10 w-36 shrink-0 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-slate-200" />
         ))}
       </div>
     );
   }
 
+  const carouselQuotes = quotes.length > 1 ? [...quotes, ...quotes] : quotes;
+
   return (
-    <div className="flex max-w-full flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
-      {quotes.map((quote) => {
-        const positive = (quote.changePercent || 0) >= 0;
-        return (
-          <div key={quote.symbol} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
-            <span className="mr-2 text-[10px] text-slate-400">{quote.label}</span>
-            {formatMarketValue(quote)}
-            <span
-              className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${
-                positive ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-red-50 text-red-500"
-              }`}
+    <div className="relative w-full min-w-0 overflow-hidden lg:flex-1">
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#f5f7fb] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#f5f7fb] to-transparent" />
+      <div
+        ref={scrollRef}
+        className="flex cursor-grab select-none flex-nowrap items-center gap-3 overflow-x-auto scroll-smooth pr-4 text-xs font-bold text-slate-600 active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+        onMouseEnter={pause}
+        onMouseLeave={() => resumeSoon(1200)}
+        onWheel={() => {
+          pause();
+          resumeSoon(3000);
+        }}
+        onPointerDown={(event) => {
+          const scroller = scrollRef.current;
+          if (!scroller) return;
+          pause();
+          draggingRef.current = true;
+          dragStartXRef.current = event.clientX;
+          dragStartScrollRef.current = scroller.scrollLeft;
+          scroller.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const scroller = scrollRef.current;
+          if (!draggingRef.current || !scroller) return;
+          scroller.scrollLeft = dragStartScrollRef.current - (event.clientX - dragStartXRef.current);
+        }}
+        onPointerUp={(event) => {
+          const scroller = scrollRef.current;
+          draggingRef.current = false;
+          scroller?.releasePointerCapture(event.pointerId);
+          resumeSoon(3000);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+          resumeSoon(3000);
+        }}
+      >
+        {carouselQuotes.map((quote, index) => {
+          const positive = (quote.changePercent || 0) >= 0;
+          return (
+            <div
+              key={`${quote.symbol}-${index}`}
+              className="shrink-0 rounded-xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-slate-200"
             >
-              {formatMarketChange(quote.changePercent)}
-            </span>
-          </div>
-        );
-      })}
+              <span className="mr-2 text-[10px] text-slate-400">{quote.label}</span>
+              {formatMarketValue(quote)}
+              <span
+                className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${
+                  positive ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-red-50 text-red-500"
+                }`}
+              >
+                {formatMarketChange(quote.changePercent)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
