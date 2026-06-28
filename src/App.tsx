@@ -14,6 +14,7 @@ import IA from "./pages/IA";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RootRoute } from "./components/RootRoute";
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 
@@ -22,7 +23,7 @@ function App() {
     <Router>
       <div className="min-h-screen bg-background">
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<Login />} />
           <Route
             path="/dashboard"
