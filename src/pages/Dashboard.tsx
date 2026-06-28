@@ -5,6 +5,7 @@ import {
   Crown,
   DollarSign,
   Eye,
+  EyeOff,
   Landmark,
   LineChart,
   PiggyBank,
@@ -28,6 +29,8 @@ type Period = "dia" | "semana" | "mes" | "ano";
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const maskMoney = "••••••";
 
 const percentOfTotal = (value: number, total: number) => (total > 0 ? (value / total) * 100 : 0);
 
@@ -96,6 +99,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>("mes");
   const [now, setNow] = useState(() => new Date());
+  const [hideValues, setHideValues] = useState(() => localStorage.getItem("hideDashboardValues") === "true");
   const { transacoes, loading: loadingTransacoes } = useTransacoes();
   const { accounts } = useBankAccounts();
   const { profile } = useProfile();
@@ -105,6 +109,12 @@ const Dashboard = () => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const toggleValuesVisibility = () => {
+    const nextValue = !hideValues;
+    setHideValues(nextValue);
+    localStorage.setItem("hideDashboardValues", String(nextValue));
+  };
 
   const data = useMemo(() => {
     const start = getPeriodStart(period);
@@ -183,7 +193,17 @@ const Dashboard = () => {
               {currentDateLabel(now)}
             </span>
             <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">{currentTimeLabel(now)}</span>
-            <Eye className="h-4 w-4" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 hover:text-[#FF6A00]"
+              onClick={toggleValuesVisibility}
+              aria-label={hideValues ? "Mostrar valores" : "Ocultar valores"}
+              title={hideValues ? "Mostrar valores" : "Ocultar valores"}
+            >
+              {hideValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
@@ -197,7 +217,7 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-slate-500">
                 Soma de {accounts.length} conta{accounts.length === 1 ? "" : "s"} pessoa{accounts.length === 1 ? "l" : "is"}
               </p>
-              <p className="mt-5 text-5xl font-bold text-[#FF6A00]">{formatCurrency(totalBankBalance)}</p>
+              <p className="mt-5 text-5xl font-bold text-[#FF6A00]">{hideValues ? maskMoney : formatCurrency(totalBankBalance)}</p>
               <p className="mt-2 text-sm text-slate-500">
                 {accounts.length ? "Saldo consolidado das contas cadastradas." : "Cadastre seus bancos para ver o saldo consolidado."}
               </p>
@@ -206,9 +226,9 @@ const Dashboard = () => {
         </section>
 
         <div className="mb-5 grid gap-4 md:grid-cols-3">
-          <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="orange" />
-          <MiniMetric title="Despesas pessoal" value={data.despesas} icon={TrendingDown} tone="red" />
-          <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="navy" />
+          <MiniMetric title="Receitas pessoal" value={data.receitas} icon={TrendingUp} tone="orange" hideValues={hideValues} />
+          <MiniMetric title="Despesas pessoal" value={data.despesas} icon={TrendingDown} tone="red" hideValues={hideValues} />
+          <MiniMetric title="Saldo pessoal" value={data.saldo} icon={DollarSign} tone="navy" hideValues={hideValues} />
         </div>
 
         <div className="mb-5 grid gap-5 lg:grid-cols-3">
@@ -220,6 +240,7 @@ const Dashboard = () => {
               businessAmount={businessIncome}
               personalPercent={percentOfTotal(data.receitas, totalIncomeDistribution)}
               businessPercent={percentOfTotal(businessIncome, totalIncomeDistribution)}
+              hideValues={hideValues}
             />
             <Distribution
               label="Distribuição de despesas"
@@ -228,6 +249,7 @@ const Dashboard = () => {
               personalPercent={percentOfTotal(data.despesas, totalExpenseDistribution)}
               businessPercent={percentOfTotal(businessExpense, totalExpenseDistribution)}
               danger
+              hideValues={hideValues}
             />
           </Card>
 
@@ -253,9 +275,9 @@ const Dashboard = () => {
         <Card className="mb-5 rounded-2xl border-slate-700/40 bg-white p-6 shadow-sm">
           <SectionTitle icon={Wallet} title="Visão consolidada" subtitle="Pessoal + empresarial no mês atual" />
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <SummaryPill label="Receitas" value={data.receitas} tone="orange" />
-            <SummaryPill label="Despesas" value={data.despesas} tone="red" />
-            <SummaryPill label="Saldo" value={data.saldo} tone="orange" />
+            <SummaryPill label="Receitas" value={data.receitas} tone="orange" hideValues={hideValues} />
+            <SummaryPill label="Despesas" value={data.despesas} tone="red" hideValues={hideValues} />
+            <SummaryPill label="Saldo" value={data.saldo} tone="orange" hideValues={hideValues} />
           </div>
           <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
             <div>
@@ -293,9 +315,9 @@ const Dashboard = () => {
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={Calendar} title={`Resumo de ${monthLabel()}`} subtitle="Comparativo com o mês anterior" />
             <div className="mt-5 space-y-4">
-              <SummaryRow label="Receitas" value={data.receitas} tone="orange" />
-              <SummaryRow label="Despesas" value={data.despesas} tone="red" />
-              <SummaryRow label="Saldo do mês" value={data.saldo} tone="orange" />
+              <SummaryRow label="Receitas" value={data.receitas} tone="orange" hideValues={hideValues} />
+              <SummaryRow label="Despesas" value={data.despesas} tone="red" hideValues={hideValues} />
+              <SummaryRow label="Saldo do mês" value={data.saldo} tone="orange" hideValues={hideValues} />
             </div>
             <div className="mt-5 flex items-end justify-between">
               <div>
@@ -324,7 +346,7 @@ const Dashboard = () => {
                   <div key={category}>
                     <div className="mb-1 flex justify-between text-sm font-semibold text-slate-600">
                       <span>{category}</span>
-                      <span>{formatCurrency(value)}</span>
+                      <span>{hideValues ? maskMoney : formatCurrency(value)}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100">
                       <div className="h-2 rounded-full bg-[#FF6A00]" style={{ width: `${Math.min(100, (value / Math.max(data.despesas, 1)) * 100)}%` }} />
@@ -471,7 +493,19 @@ const SectionTitle = ({ icon: Icon, title, subtitle }: { icon: React.ComponentTy
   </div>
 );
 
-const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: number; icon: React.ComponentType<{ className?: string }>; tone: "orange" | "red" | "navy" }) => {
+const MiniMetric = ({
+  title,
+  value,
+  icon: Icon,
+  tone,
+  hideValues,
+}: {
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: "orange" | "red" | "navy";
+  hideValues: boolean;
+}) => {
   const colors = {
     orange: "border-l-[#FF6A00] bg-[#FF6A00]/10 text-[#FF6A00]",
     red: "border-l-red-500 bg-red-50 text-red-500",
@@ -483,7 +517,7 @@ const MiniMetric = ({ title, value, icon: Icon, tone }: { title: string; value: 
         <Icon className="h-4 w-4" />
         {title}
       </p>
-      <p className="mt-3 text-2xl font-bold">{formatCurrency(value)}</p>
+      <p className="mt-3 text-2xl font-bold">{hideValues ? maskMoney : formatCurrency(value)}</p>
     </Card>
   );
 };
@@ -494,6 +528,7 @@ const Distribution = ({
   businessAmount,
   personalPercent,
   businessPercent,
+  hideValues,
   danger = false,
 }: {
   label: string;
@@ -501,6 +536,7 @@ const Distribution = ({
   businessAmount: number;
   personalPercent: number;
   businessPercent: number;
+  hideValues: boolean;
   danger?: boolean;
 }) => {
   const hasValues = personalAmount + businessAmount > 0;
@@ -528,25 +564,25 @@ const Distribution = ({
         ) : null}
       </div>
       <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
-        <span>Pessoal: {formatCurrency(personalAmount)} {personalPercent > 0 && personalPercent < 12 ? `(${personalLabel})` : ""}</span>
-        <span>Empresarial: {formatCurrency(businessAmount)} {businessPercent > 0 && businessPercent < 12 ? `(${businessLabel})` : ""}</span>
+        <span>Pessoal: {hideValues ? maskMoney : formatCurrency(personalAmount)} {personalPercent > 0 && personalPercent < 12 ? `(${personalLabel})` : ""}</span>
+        <span>Empresarial: {hideValues ? maskMoney : formatCurrency(businessAmount)} {businessPercent > 0 && businessPercent < 12 ? `(${businessLabel})` : ""}</span>
       </div>
     </div>
   );
 };
 
-const SummaryPill = ({ label, value, tone }: { label: string; value: number; tone: "orange" | "red" }) => (
+const SummaryPill = ({ label, value, tone, hideValues }: { label: string; value: number; tone: "orange" | "red"; hideValues: boolean }) => (
   <div className={`rounded-2xl p-4 text-center ${tone === "red" ? "bg-red-50 text-red-500" : "bg-[#FF6A00]/10 text-[#FF6A00]"}`}>
     <p className="text-[11px] font-bold uppercase tracking-wide">{label}</p>
-    <p className="mt-1 font-bold">{formatCurrency(value)}</p>
+    <p className="mt-1 font-bold">{hideValues ? maskMoney : formatCurrency(value)}</p>
   </div>
 );
 
-const SummaryRow = ({ label, value, tone }: { label: string; value: number; tone: "orange" | "red" }) => (
+const SummaryRow = ({ label, value, tone, hideValues }: { label: string; value: number; tone: "orange" | "red"; hideValues: boolean }) => (
   <div className={`flex items-center justify-between rounded-2xl border p-4 ${tone === "red" ? "border-red-100 bg-red-50 text-red-500" : "border-[#FF6A00]/20 bg-[#FF6A00]/10 text-[#FF6A00]"}`}>
     <div>
       <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <p className="text-xl font-bold">{formatCurrency(value)}</p>
+      <p className="text-xl font-bold">{hideValues ? maskMoney : formatCurrency(value)}</p>
     </div>
     <span className="text-sm font-bold text-slate-500">0.0%</span>
   </div>
