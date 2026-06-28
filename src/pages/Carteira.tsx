@@ -50,14 +50,10 @@ import {
   CreditCard,
   DollarSign,
   Edit,
-  Landmark,
   Loader2,
   Plus,
-  Search,
-  TriangleAlert,
   Trash,
   Trash2,
-  UserRound,
   Wallet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -280,101 +276,12 @@ const EmptyState = ({
   </Card>
 );
 
-const EmptyWalletPage = ({
-  kind,
-  count,
-  limit,
-  onAction,
-}: {
-  kind: "accounts" | "cards";
-  count: number;
-  limit: number;
-  onAction: () => void;
-}) => {
-  const isAccounts = kind === "accounts";
-  const Icon = isAccounts ? Landmark : CreditCard;
-  const title = isAccounts ? "Bancos Pessoais" : "Cartões Pessoais";
-  const subtitle = isAccounts ? "Gerencie suas contas pessoais" : "Gerencie seus cartões pessoais";
-  const searchPlaceholder = isAccounts ? "Buscar bancos..." : "Buscar cartões...";
-  const emptyTitle = isAccounts ? "Nenhum banco pessoal cadastrado" : "Nenhum cartão pessoal cadastrado";
-  const emptyDescription = isAccounts
-    ? "Comece cadastrando seu primeiro banco pessoal"
-    : "Comece cadastrando seu primeiro cartão pessoal";
-  const actionLabel = isAccounts ? "Cadastrar Primeiro Banco" : "Cadastrar Primeiro Cartão";
-  const newLabel = isAccounts ? "Novo Banco" : "Novo Cartão";
-  const nearLimitLabel = isAccounts ? "Quase no limite de bancos" : "Quase no limite de cartões";
-  const usageLabel = isAccounts
-    ? `Você está usando ${count} de ${limit} bancos.`
-    : `Você está usando ${count} de ${limit} cartões.`;
-
-  return (
-    <div className="space-y-9">
-      <Card className="rounded-2xl border border-slate-200 bg-white/70 px-5 py-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex items-start gap-4">
-            <TriangleAlert className="mt-0.5 h-5 w-5 text-slate-900 dark:text-slate-100" />
-            <div>
-              <p className="text-lg font-semibold text-slate-950 dark:text-slate-100">{nearLimitLabel}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-base text-slate-950 dark:text-slate-100">
-                <span>{usageLabel}</span>
-                <Button variant="outline" className="h-11 rounded-2xl px-5 font-semibold">
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Fazer Upgrade
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <section>
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
-              <UserRound className="h-6 w-6" />
-            </span>
-            <div>
-              <h2 className="text-3xl font-bold tracking-normal text-slate-950 dark:text-slate-100">{title}</h2>
-              <p className="text-lg text-slate-500 dark:text-slate-400">{subtitle}</p>
-            </div>
-          </div>
-          <Button onClick={onAction} className="h-12 rounded-2xl bg-[#FF6A00] px-7 text-base font-bold hover:bg-[#e85f00]">
-            <Plus className="mr-2 h-5 w-5" />
-            {newLabel}
-          </Button>
-        </div>
-
-        <div className="relative mb-20 max-w-xl">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-          <Input
-            className="h-12 rounded-2xl border-slate-200 bg-white pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900"
-            placeholder={searchPlaceholder}
-            readOnly
-          />
-        </div>
-
-        <div className="flex min-h-[300px] items-start justify-center">
-          <div className="text-center">
-            <Icon className="mx-auto mb-5 h-20 w-20 text-slate-300" strokeWidth={1.6} />
-            <h3 className="text-2xl font-bold text-slate-950 dark:text-slate-100">{emptyTitle}</h3>
-            <p className="mt-4 text-xl text-slate-500 dark:text-slate-400">{emptyDescription}</p>
-            <Button onClick={onAction} className="mt-6 h-12 rounded-2xl bg-[#FF6A00] px-8 text-base font-bold hover:bg-[#e85f00]">
-              <Plus className="mr-2 h-5 w-5" />
-              {actionLabel}
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
 const Carteira = () => {
   const { toast } = useToast();
   const { cards, createCard, updateCard, deleteCard } = useCards();
   const { accounts, createAccount, updateAccount, deleteAccount } = useBankAccounts();
 
-  const [activeTab, setActiveTab] = useState<"cards" | "accounts">("accounts");
+  const [activeTab, setActiveTab] = useState<"cards" | "accounts">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mesReferencia, setMesReferencia] = useState(() => {
     const hoje = new Date();
@@ -1003,7 +910,7 @@ const Carteira = () => {
                 Carteira
               </h1>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                {isCardsTab ? "Cartões" : "Bancos"}
+                {isCardsTab ? "Cartoes" : "Bancos/Contas"}
               </span>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300 md:text-base">
@@ -1051,7 +958,7 @@ const Carteira = () => {
               className="h-14 w-auto bg-orange-500 px-5 text-sm font-semibold shadow-sm transition hover:bg-orange-600 hover:shadow-md"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {isCardsTab ? "Novo Cartão" : "Novo Banco"}
+              {isCardsTab ? "Novo Cartao" : "Nova Conta"}
             </Button>
           </div>
         </div>
@@ -1063,27 +970,33 @@ const Carteira = () => {
         >
           <div className="flex items-center justify-start mt-4 mb-6">
             <TabsList className="w-full grid grid-cols-2 sm:w-auto sm:inline-flex">
-              <TabsTrigger value="accounts" className="text-sm">
-                Bancos
-              </TabsTrigger>
               <TabsTrigger value="cards" className="text-sm">
-                Cartões
+                Cartoes
+              </TabsTrigger>
+              <TabsTrigger value="accounts" className="text-sm">
+                Bancos/Contas
               </TabsTrigger>
             </TabsList>
           </div>
           {isCardsTab ? (
           <>
-            {cardsWithUsage.length === 0 ? (
-              <EmptyWalletPage kind="cards" count={cardsWithUsage.length} limit={2} onAction={openCreateDialog} />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
-                  <WalletSummaryCard icon={CreditCard} label="Limite Total" value={formatCurrency(cardsKpis.totalLimit)} hint="Total" iconClassName="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300" />
-                  <WalletSummaryCard icon={Wallet} label="Cartões" value={String(cardsKpis.cardsCount)} hint="Cadastrados" iconClassName="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300" />
-                  <WalletSummaryCard icon={DollarSign} label="Uso no Mês" value={formatCurrency(cardsKpis.usedMonth)} hint="Neste mês" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
-                  <WalletSummaryCard icon={Building2} label="Disponível" value={formatCurrency(cardsKpis.available)} hint="Limite restante" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
-                </div>
-                <div className="h-8" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+              <WalletSummaryCard icon={CreditCard} label="Limite Total" value={formatCurrency(cardsKpis.totalLimit)} hint="Total" iconClassName="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300" />
+              <WalletSummaryCard icon={Wallet} label="Cartoes" value={String(cardsKpis.cardsCount)} hint="Cadastrados" iconClassName="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300" />
+              <WalletSummaryCard icon={DollarSign} label="Uso no Mes" value={formatCurrency(cardsKpis.usedMonth)} hint="Neste mes" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
+              <WalletSummaryCard icon={Building2} label="Disponivel" value={formatCurrency(cardsKpis.available)} hint="Limite restante" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
+            </div>
+            <div className="h-8" />
+            <div>
+              {cardsWithUsage.length === 0 ? (
+                <EmptyState
+                  icon={CreditCard}
+                  title="Nenhum cartao cadastrado"
+                  description="Cadastre seu primeiro cartao para acompanhar limite, uso mensal e ciclo da fatura."
+                  actionLabel="Adicionar Cartao"
+                  onAction={openCreateDialog}
+                />
+             ) : (
                 <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
                     <Table>
@@ -1210,12 +1123,12 @@ const Carteira = () => {
                     ))}
                   </div>
                 </Card>
-              </>
-            )}
+              )}
+            </div>
           </>
          ) : (
           <>
-            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-5`}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-5">
               <WalletSummaryCard
                 icon={DollarSign}
                 label="Saldo Total"
@@ -1234,10 +1147,16 @@ const Carteira = () => {
               <WalletSummaryCard icon={Building2} label="Maior Saldo" value={accountsKpis.highest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.highest.id] || 0)) : "-"} hint={accountsKpis.highest.name || "Sem conta"} iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" />
               <WalletSummaryCard icon={Building2} label="Menor Saldo" value={accountsKpis.lowest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.lowest.id] || 0)) : "-"} hint={accountsKpis.lowest.name || "Sem conta"} iconClassName="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" />
             </div>
-            {accounts.length > 0 ? <div className="h-8" /> : null}
+            <div className="h-8" />
             <div>
               {accounts.length === 0 ? (
-                <EmptyWalletPage kind="accounts" count={accounts.length} limit={2} onAction={openCreateDialog} />
+                <EmptyState
+                  icon={Building2}
+                  title="Nenhuma conta cadastrada"
+                  description="Cadastre sua primeira conta para centralizar saldos e acompanhar sua liquidez."
+                  actionLabel="Adicionar Conta"
+                  onAction={openCreateDialog}
+                />
              ) : (
                 <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
