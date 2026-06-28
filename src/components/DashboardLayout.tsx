@@ -118,9 +118,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         }`}
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
-          <Link to="/dashboard" className="flex items-center gap-3" onClick={closeMobileMenu}>
-            <img src="/brand/icon.png" alt="LocalFiny" className="h-9 w-9 rounded-xl object-contain" />
-            <span className="text-lg font-bold text-[#FF6A00]">LocalFiny</span>
+          <Link to="/dashboard" className="flex min-w-0 items-center" onClick={closeMobileMenu}>
+            <img src="/brand/logo.png" alt="LocalFiny" className="h-10 w-auto max-w-[170px] object-contain" />
           </Link>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={closeMobileMenu}>
             <X className="h-5 w-5" />
