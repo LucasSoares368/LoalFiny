@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Calendar,
+  Clock,
   Crown,
   DollarSign,
   Eye,
@@ -188,16 +189,22 @@ const Dashboard = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-500">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">
-              <Calendar className="h-4 w-4" />
-              {currentDateLabel(now)}
-            </span>
-            <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200">{currentTimeLabel(now)}</span>
+            <div className="inline-flex items-center gap-4 rounded-full bg-slate-50/90 px-5 py-3 shadow-sm ring-1 ring-slate-100">
+              <span className="inline-flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {currentDateLabel(now)}
+              </span>
+              <span className="h-5 w-px bg-slate-200" />
+              <span className="inline-flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {currentTimeLabel(now)}
+              </span>
+            </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 hover:text-[#FF6A00]"
+              className="h-9 w-9 rounded-full text-slate-500 hover:bg-slate-100 hover:text-[#FF6A00]"
               onClick={toggleValuesVisibility}
               aria-label={hideValues ? "Mostrar valores" : "Ocultar valores"}
               title={hideValues ? "Mostrar valores" : "Ocultar valores"}
