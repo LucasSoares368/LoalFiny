@@ -57,6 +57,8 @@ import {
   Search,
   Trash,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   UserRound,
   Wallet,
 } from "lucide-react";
