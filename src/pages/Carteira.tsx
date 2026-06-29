@@ -1066,19 +1066,19 @@ const Carteira = () => {
             </div>
           </div>
 
-          <div className="grid h-14 w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400 sm:w-[330px]">
+          <div className="flex items-center gap-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
             <button
               type="button"
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#FF6A00] text-white shadow-sm"
+              className="flex h-9 items-center justify-center gap-2 rounded-xl bg-[#FF6A00] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#e85f00]"
             >
               <UserRound className="h-4 w-4" />
               Pessoal
             </button>
             <button
               type="button"
-              className="flex items-center justify-center gap-2 rounded-xl"
+              className="flex h-9 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             >
-              <Building2 className="h-4 w-4" />
+              <Landmark className="h-4 w-4" />
               Empresarial
             </button>
           </div>
