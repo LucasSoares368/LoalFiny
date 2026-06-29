@@ -1019,10 +1019,34 @@ const Carteira = () => {
     <DashboardLayout>
       <div className="min-h-[calc(100vh-1px)] bg-slate-50 dark:bg-[#0D1B2A]">
         <header className="flex min-h-[72px] flex-col gap-4 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:h-16 sm:min-h-16 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
-          <div className="flex min-w-0 items-center gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <h1 className="truncate text-2xl font-bold text-slate-950 dark:text-slate-100">
               {pageTitle}
             </h1>
+            <div className="grid h-10 w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400 sm:w-[210px]">
+              <button
+                type="button"
+                onClick={() => setActiveTab("accounts")}
+                className={`rounded-xl transition ${
+                  activeTab === "accounts"
+                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+                    : "hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
+              >
+                Bancos
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("cards")}
+                className={`rounded-xl transition ${
+                  activeTab === "cards"
+                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+                    : "hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
+              >
+                Cartões
+              </button>
+            </div>
           </div>
 
           <div className="grid h-14 w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold text-slate-500 dark:bg-slate-900 dark:text-slate-400 sm:w-[330px]">
@@ -1107,7 +1131,7 @@ const Carteira = () => {
           onValueChange={(value) => setActiveTab(value as "cards" | "accounts")}
           className="space-y-0 px-4 py-4 sm:px-6 lg:px-8"
         >
-          <div className="flex items-center justify-start mt-4 mb-6">
+          <div className="hidden">
             <TabsList className="w-full grid grid-cols-2 sm:w-auto sm:inline-flex">
               <TabsTrigger value="accounts" className="text-sm">
                 Bancos
