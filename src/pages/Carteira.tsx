@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -353,10 +354,45 @@ const EmptyWalletPage = ({
   );
 };
 
+const WalletLoadingPage = () => (
+  <div className="space-y-8 pt-8">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Card key={index} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-2xl" />
+            <div className="flex-1 space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-7 w-32" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+    <Skeleton className="h-12 max-w-xl rounded-2xl" />
+    <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <Card key={index} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-14 w-14 rounded-2xl" />
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-44" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-28" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
+
 const Carteira = () => {
   const { toast } = useToast();
-  const { cards, createCard, updateCard, deleteCard } = useCards();
-  const { accounts, createAccount, updateAccount, deleteAccount } = useBankAccounts();
+  const { cards, loading: loadingCards, createCard, updateCard, deleteCard } = useCards();
+  const { accounts, loading: loadingAccounts, createAccount, updateAccount, deleteAccount } = useBankAccounts();
 
   const [activeTab, setActiveTab] = useState<"cards" | "accounts">("accounts");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1006,6 +1042,7 @@ const Carteira = () => {
 
   const pageTitle = isCardsTab ? "Meus Cart\u00f5es" : "Meus Bancos";
   const hasWalletItems = isCardsTab ? cardsWithUsage.length > 0 : accounts.length > 0;
+  const isWalletLoading = isCardsTab ? loadingCards : loadingAccounts;
   const activeSectionTitle = isCardsTab ? "Cart\u00f5es Pessoais" : "Bancos Pessoais";
   const activeSectionSubtitle = isCardsTab ? "Gerencie seus cart\u00f5es pessoais" : "Gerencie suas contas pessoais";
   const activeNewLabel = isCardsTab ? "Novo Cart\u00e3o" : "Novo Banco";
@@ -1175,7 +1212,7 @@ const Carteira = () => {
               </TabsTrigger>
             </TabsList>
           </div>
-          {hasWalletItems ? (
+          {hasWalletItems && !isWalletLoading ? (
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
@@ -1201,7 +1238,9 @@ const Carteira = () => {
           ) : null}
           {isCardsTab ? (
           <>
-            {cardsWithUsage.length === 0 ? (
+            {loadingCards ? (
+              <WalletLoadingPage />
+            ) : cardsWithUsage.length === 0 ? (
               <EmptyWalletPage kind="cards" onAction={openCreateDialog} periodControl={periodControl} />
             ) : (
               <>
@@ -1379,7 +1418,7 @@ const Carteira = () => {
           </>
          ) : (
           <>
-            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 pt-8 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
+            <div className={`${accounts.length === 0 || loadingAccounts ? "hidden" : "grid"} grid-cols-1 gap-4 pt-8 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
               <WalletSummaryCard icon={Wallet} label="Saldo Total" value={formatCurrency(accountsKpis.realBalance)} hint="Saldo consolidado" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
               <WalletSummaryCard icon={Building2} label="Contas Ativas" value={String(accountsKpis.accountsCount)} hint="Cadastradas" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-600" />
               <WalletSummaryCard icon={TrendingUp} label="Saldo Positivo" value={formatCurrency(accountBalanceGroups.positive)} hint="Contas no positivo" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
@@ -1404,7 +1443,9 @@ const Carteira = () => {
               <WalletSummaryCard icon={Building2} label="Maior Saldo" value={accountsKpis.highest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.highest.id] || 0)) : "-"} hint={accountsKpis.highest?.name || "Sem conta"} iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" />
               <WalletSummaryCard icon={Building2} label="Menor Saldo" value={accountsKpis.lowest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.lowest.id] || 0)) : "-"} hint={accountsKpis.lowest?.name || "Sem conta"} iconClassName="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" />
             </div>
-            {accounts.length > 0 ? (
+            {loadingAccounts ? (
+              <WalletLoadingPage />
+            ) : accounts.length > 0 ? (
               <>
                 <div className="relative mt-20 mb-10 max-w-xl" style={{ marginTop: 25 }}>
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -1448,7 +1489,7 @@ const Carteira = () => {
               </>
             ) : null}
             <div>
-              {accounts.length === 0 ? (
+              {!loadingAccounts && accounts.length === 0 ? (
                 <EmptyWalletPage kind="accounts" onAction={openCreateDialog} periodControl={periodControl} />
              ) : (
                 <Card className="hidden overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
