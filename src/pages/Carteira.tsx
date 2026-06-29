@@ -187,27 +187,29 @@ const WalletSummaryCard = ({
   value,
   hint,
   iconClassName,
+  valueClassName = "text-slate-950 dark:text-slate-100",
 }: {
   icon: React.ComponentType<{ className: string }>;
   label: string;
   value: string;
   hint: string;
   iconClassName: string;
+  valueClassName?: string;
 }) => (
-  <Card className="border border-slate-200 p-4 shadow-sm transition hover:shadow-md dark:border-slate-700 md:p-6">
-    <div className="flex items-start justify-between gap-3">
-      <div className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+  <Card className="min-h-[118px] rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${iconClassName}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100 md:text-3xl">
-          {value}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p>
       </div>
-      <div className={`rounded-xl p-3 ${iconClassName}`}>
-        <Icon className="h-6 w-6" />
-      </div>
+      <p className={`text-2xl font-bold tabular-nums ${valueClassName}`}>
+        {value}
+      </p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{hint}</p>
     </div>
   </Card>
 );
@@ -1144,7 +1146,7 @@ const Carteira = () => {
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "cards" | "accounts")}
-          className="space-y-0 px-4 py-4 sm:px-6 lg:px-8"
+          className="space-y-0 px-4 py-8 sm:px-6 lg:px-8"
         >
           <div className="hidden">
             <TabsList className="w-full grid grid-cols-2 sm:w-auto sm:inline-flex">
@@ -1157,7 +1159,7 @@ const Carteira = () => {
             </TabsList>
           </div>
           {hasWalletItems ? (
-            <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
                   <UserRound className="h-6 w-6" />
@@ -1196,7 +1198,7 @@ const Carteira = () => {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar cartões..." readOnly />
                 </div>
-                <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="mt-6 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
                   {cardsWithUsage.map((card) => (
                     <Card key={card.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                       <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: card.brand_color || "#FF6A00" }} />
@@ -1361,10 +1363,10 @@ const Carteira = () => {
          ) : (
           <>
             <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
-              <WalletSummaryCard icon={Wallet} label="Saldo Total" value={formatCurrency(accountsKpis.realBalance)} hint="Saldo consolidado" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
-              <WalletSummaryCard icon={Building2} label="Contas Ativas" value={String(accountsKpis.accountsCount)} hint="Cadastradas" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
-              <WalletSummaryCard icon={TrendingUp} label="Saldo Positivo" value={formatCurrency(accountBalanceGroups.positive)} hint="Contas no positivo" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
-              <WalletSummaryCard icon={TrendingDown} label="Saldo Negativo" value={formatCurrency(accountBalanceGroups.negative)} hint="Contas no negativo" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
+              <WalletSummaryCard icon={Wallet} label="Saldo Total" value={formatCurrency(accountsKpis.realBalance)} hint="Saldo consolidado" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
+              <WalletSummaryCard icon={Building2} label="Contas Ativas" value={String(accountsKpis.accountsCount)} hint="Cadastradas" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-600" />
+              <WalletSummaryCard icon={TrendingUp} label="Saldo Positivo" value={formatCurrency(accountBalanceGroups.positive)} hint="Contas no positivo" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
+              <WalletSummaryCard icon={TrendingDown} label="Saldo Negativo" value={formatCurrency(accountBalanceGroups.negative)} hint="Contas no negativo" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" valueClassName="text-red-500" />
             </div>
             <div className="hidden">
               <WalletSummaryCard
@@ -1391,7 +1393,7 @@ const Carteira = () => {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar bancos..." readOnly />
                 </div>
-                <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="mt-6 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
                   {accounts.map((account) => {
                     const balance = Number(currentBalanceByAccount[account.id] || 0);
                     const bankSlug = resolveBankSlug(account.bank_name);
