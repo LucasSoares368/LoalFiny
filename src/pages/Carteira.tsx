@@ -1159,7 +1159,7 @@ const Carteira = () => {
             </TabsList>
           </div>
           {hasWalletItems ? (
-            <div className="mb-14 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
                   <UserRound className="h-6 w-6" />
@@ -1182,6 +1182,7 @@ const Carteira = () => {
               </div>
             </div>
           ) : null}
+          {hasWalletItems ? <div className="h-12" aria-hidden="true" /> : null}
           {isCardsTab ? (
           <>
             {cardsWithUsage.length === 0 ? (
