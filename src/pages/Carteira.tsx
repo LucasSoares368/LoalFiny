@@ -1159,7 +1159,7 @@ const Carteira = () => {
             </TabsList>
           </div>
           {hasWalletItems ? (
-            <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-14 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FF6A00]/10 text-[#FF6A00]">
                   <UserRound className="h-6 w-6" />
@@ -1194,11 +1194,11 @@ const Carteira = () => {
                   <WalletSummaryCard icon={DollarSign} label="Uso no Mês" value={formatCurrency(cardsKpis.usedMonth)} hint="Neste mês" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
                   <WalletSummaryCard icon={Building2} label="Disponível" value={formatCurrency(cardsKpis.available)} hint="Limite restante" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
                 </div>
-                <div className="relative mt-8 max-w-xl">
+                <div className="relative mt-14 max-w-xl">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar cartões..." readOnly />
                 </div>
-                <div className="mt-6 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="mt-10 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
                   {cardsWithUsage.map((card) => (
                     <Card key={card.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                       <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: card.brand_color || "#FF6A00" }} />
@@ -1389,11 +1389,11 @@ const Carteira = () => {
             </div>
             {accounts.length > 0 ? (
               <>
-                <div className="relative mt-8 max-w-xl">
+                <div className="relative mt-14 max-w-xl">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar bancos..." readOnly />
                 </div>
-                <div className="mt-6 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="mt-10 grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
                   {accounts.map((account) => {
                     const balance = Number(currentBalanceByAccount[account.id] || 0);
                     const bankSlug = resolveBankSlug(account.bank_name);
