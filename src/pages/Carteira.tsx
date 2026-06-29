@@ -956,7 +956,7 @@ const Carteira = () => {
   const handleSaveAccount = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!accountForm.name.trim() || !accountForm.bank_name.trim() || !accountForm.balance) {
+    if (!accountForm.account_holder_name.trim() || !accountForm.bank_name.trim() || !accountForm.balance) {
       toast({
         title: "Erro",
         description: "Preencha os campos obrigatorios.",
@@ -965,8 +965,10 @@ const Carteira = () => {
       return;
     }
 
+    const generatedAccountName = `${accountForm.bank_name.trim()} - ${contaTipoLabel[accountForm.account_type]}`;
+
     const payload = {
-      name: accountForm.name.trim(),
+      name: generatedAccountName,
       account_holder_name: accountForm.account_holder_name.trim() || null,
       bank_name: accountForm.bank_name.trim(),
       account_type: accountForm.account_type,
@@ -1758,11 +1760,7 @@ const Carteira = () => {
                 <form onSubmit={handleSaveAccount} className="space-y-5">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="account-name">Nome da conta *</Label>
-                      <Input id="account-name" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="account-holder-name">Proprietario</Label>
+                      <Label htmlFor="account-holder-name">Proprietario *</Label>
                       <Input
                         id="account-holder-name"
                         value={accountForm.account_holder_name}
@@ -1940,10 +1938,10 @@ const Carteira = () => {
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="font-semibold text-white">
-                              {accountForm.name.trim() || "Nome da conta"}
+                              {accountForm.bank_name.trim() || "Banco"}
                             </p>
                             <p className="mt-1 text-sm text-white/80">
-                              {accountForm.bank_name.trim() || "Banco"}
+                              {contaTipoLabel[accountForm.account_type]}
                             </p>
                             {accountForm.account_holder_name.trim() ? (
                               <p className="mt-2 text-xs uppercase tracking-wide text-white/70">
