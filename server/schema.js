@@ -24,7 +24,7 @@ export const TABLE_COLUMNS = {
   categorias: ["id", "user_id", "nome", "tipo", "cor", "icone", "created_at", "updated_at"],
   categorias_mercado: ["id", "user_id", "nome", "descricao", "cor", "ativa", "created_at", "updated_at"],
   categorias_metas: ["id", "user_id", "nome", "descricao", "cor", "ativa", "created_at", "updated_at"],
-  bank_accounts: ["id", "user_id", "name", "bank_name", "account_type", "balance", "balance_reference_date", "account_holder_name", "provider", "external_id", "last_sync_at", "created_at", "updated_at"],
+  bank_accounts: ["id", "user_id", "name", "bank_name", "account_type", "balance", "balance_reference_date", "account_holder_name", "notes", "is_active", "provider", "external_id", "last_sync_at", "created_at", "updated_at"],
   cards: ["id", "user_id", "name", "issuer_bank", "bank_code", "bank_name", "bank_slug", "brand_color", "card_holder_name", "credit_limit", "closing_day", "due_day", "provider", "external_id", "last_sync_at", "created_at", "updated_at"],
   transacoes: ["id", "user_id", "categoria_id", "descricao", "valor", "data", "tipo", "created_at", "updated_at"],
   receitas: ["id", "user_id", "categoria_id", "bank_account_id", "descricao", "valor", "data", "recorrente", "dia_recorrencia", "receita_pai_id", "frequencia_recorrencia", "data_fim_recorrencia", "forma_pagamento", "status_recebimento", "tipo_receita", "created_at", "updated_at"],
@@ -43,6 +43,7 @@ export const TABLE_COLUMNS = {
 export const BOOLEAN_COLUMNS = new Set([
   "ativa",
   "ativo",
+  "is_active",
   "recorrente",
 ]);
 

@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -405,9 +407,16 @@ const Carteira = () => {
     account_type: "corrente" as BankAccountType,
     balance: "",
     balance_reference_date: "",
+    notes: "",
+    is_active: true,
   });
 
   const isCardsTab = activeTab === "cards";
+  const activeAccounts = useMemo(
+    () => accounts.filter((account) => account.is_active !== false),
+    [accounts]
+  );
+
   const resetCardForm = () => {
     setCardEditingId(null);
     setCardForm({
@@ -438,6 +447,8 @@ const Carteira = () => {
       account_type: "corrente" as BankAccountType,
       balance: "",
       balance_reference_date: "",
+      notes: "",
+      is_active: true,
     });
     setAccountBankQuery("");
     setAccountBankSuggestions([]);
@@ -487,6 +498,8 @@ const Carteira = () => {
       account_type: account.account_type,
       balance: String(account.balance),
       balance_reference_date: account.balance_reference_date || "",
+      notes: account.notes || "",
+      is_active: account.is_active !== false,
     });
     setAccountBankQuery(account.bank_name);
     setDialogOpen(true);
@@ -829,13 +842,13 @@ const Carteira = () => {
   }, [cardsWithUsage]);
 
   const accountsKpis = useMemo(() => {
-    const baseBalance = accounts.reduce(
+    const baseBalance = activeAccounts.reduce(
       (sum, account) => sum + Number(account.balance || 0),
       0
     );
     const realBalance = baseBalance + receivedIncomeMonth - paidExpensesTotal;
 
-    const sorted = [...accounts].sort((a, b) => {
+    const sorted = [...activeAccounts].sort((a, b) => {
       const balanceA =
         Number(a.balance || 0) + Number(receivedIncomeByAccount[a.id] || 0);
       const balanceB =
@@ -850,12 +863,12 @@ const Carteira = () => {
       receivedIncome: receivedIncomeMonth,
       expectedIncome: expectedIncomeMonth,
       projectedBalance: realBalance + expectedIncomeMonth,
-      accountsCount: accounts.length,
+      accountsCount: activeAccounts.length,
       highest: sorted[0] || null,
       lowest: sorted[sorted.length - 1] || null,
     };
   }, [
-    accounts,
+    activeAccounts,
     expectedIncomeMonth,
     paidExpensesTotal,
     receivedIncomeMonth,
@@ -864,13 +877,13 @@ const Carteira = () => {
 
   const currentBalanceByAccount = useMemo(() => {
     const byAccount: Record<string, number> = {};
-    for (const account of accounts) {
+    for (const account of activeAccounts) {
       byAccount[account.id] =
         Number(account.balance || 0) +
         Number(receivedIncomeByAccount[account.id] || 0);
     }
     return byAccount;
-  }, [accounts, receivedIncomeByAccount]);
+  }, [activeAccounts, receivedIncomeByAccount]);
 
   const accountBalanceGroups = useMemo(() => {
     let positive = 0;
@@ -974,6 +987,8 @@ const Carteira = () => {
       account_type: accountForm.account_type,
       balance: Number(accountForm.balance),
       balance_reference_date: accountForm.balance_reference_date || null,
+      notes: accountForm.notes.trim() || null,
+      is_active: accountForm.is_active,
       provider: null,
       external_id: null,
       last_sync_at: null,
@@ -1923,6 +1938,42 @@ const Carteira = () => {
                         placeholder="R$ 0,00"
                         className="text-right"
                         onValueChange={(value) => setAccountForm({ ...accountForm, balance: value })}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="account-notes">Observacoes</Label>
+                      <Textarea
+                        id="account-notes"
+                        value={accountForm.notes}
+                        placeholder="Anotacoes sobre esta conta..."
+                        className="min-h-24 resize-y rounded-2xl border-slate-200 bg-white/80 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                        onChange={(event) =>
+                          setAccountForm({
+                            ...accountForm,
+                            notes: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-5 dark:bg-slate-900/60 md:col-span-2">
+                      <div>
+                        <Label htmlFor="account-active" className="text-base font-semibold">
+                          Conta Ativa
+                        </Label>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          Contas inativas nao aparecem no saldo total
+                        </p>
+                      </div>
+                      <Switch
+                        id="account-active"
+                        checked={accountForm.is_active}
+                        onCheckedChange={(checked) =>
+                          setAccountForm({
+                            ...accountForm,
+                            is_active: checked,
+                          })
+                        }
+                        className="data-[state=checked]:bg-emerald-600"
                       />
                     </div>
                     <div className="md:col-span-2">

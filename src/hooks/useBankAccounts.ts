@@ -14,6 +14,9 @@ export interface BankAccount {
   account_type: BankAccountType;
   balance: number;
   balance_reference_date: string | null;
+  account_holder_name: string | null;
+  notes: string | null;
+  is_active: boolean;
   provider: string | null;
   external_id: string | null;
   last_sync_at: string | null;

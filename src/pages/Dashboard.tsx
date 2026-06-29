@@ -105,6 +105,10 @@ const Dashboard = () => {
   const { accounts } = useBankAccounts();
   const { profile } = useProfile();
   const marketQuotes = useMarketQuotes();
+  const activeAccounts = useMemo(
+    () => accounts.filter((account) => account.is_active !== false),
+    [accounts]
+  );
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -148,7 +152,7 @@ const Dashboard = () => {
     };
   }, [period, transacoes]);
 
-  const totalBankBalance = accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
+  const totalBankBalance = activeAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
   const savingsRate = data.receitas > 0 ? Math.max(0, (data.saldo / data.receitas) * 100) : 0;
   const userName = profile?.name || "Usuário";
 
@@ -222,11 +226,11 @@ const Dashboard = () => {
             <div>
               <p className="text-2xl font-bold text-slate-950">Saldo disponível</p>
               <p className="text-sm font-medium text-slate-500">
-                Soma de {accounts.length} conta{accounts.length === 1 ? "" : "s"} pessoa{accounts.length === 1 ? "l" : "is"}
+                Soma de {activeAccounts.length} conta{activeAccounts.length === 1 ? "" : "s"} pessoa{activeAccounts.length === 1 ? "l" : "is"}
               </p>
               <p className="mt-5 text-5xl font-bold text-[#FF6A00]">{hideValues ? maskMoney : formatCurrency(totalBankBalance)}</p>
               <p className="mt-2 text-sm text-slate-500">
-                {accounts.length ? "Saldo consolidado das contas cadastradas." : "Cadastre seus bancos para ver o saldo consolidado."}
+                {activeAccounts.length ? "Saldo consolidado das contas ativas." : "Cadastre seus bancos para ver o saldo consolidado."}
               </p>
             </div>
           </div>
