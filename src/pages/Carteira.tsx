@@ -1182,7 +1182,6 @@ const Carteira = () => {
               </div>
             </div>
           ) : null}
-          {hasWalletItems ? <div className="h-12" aria-hidden="true" /> : null}
           {isCardsTab ? (
           <>
             {cardsWithUsage.length === 0 ? (
