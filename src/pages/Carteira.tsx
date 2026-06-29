@@ -1198,7 +1198,7 @@ const Carteira = () => {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar cartões..." readOnly />
                 </div>
-                <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2" style={{ marginTop: 25 }}>
                   {cardsWithUsage.map((card) => (
                     <Card key={card.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                       <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: card.brand_color || "#FF6A00" }} />
@@ -1393,7 +1393,7 @@ const Carteira = () => {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar bancos..." readOnly />
                 </div>
-                <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
+                <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2" style={{ marginTop: 25 }}>
                   {accounts.map((account) => {
                     const balance = Number(currentBalanceByAccount[account.id] || 0);
                     const bankSlug = resolveBankSlug(account.bank_name);
