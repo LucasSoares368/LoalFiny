@@ -1189,7 +1189,7 @@ const Carteira = () => {
               <EmptyWalletPage kind="cards" onAction={openCreateDialog} periodControl={periodControl} />
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 pt-8 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
                   <WalletSummaryCard icon={CreditCard} label="Limite Total" value={formatCurrency(cardsKpis.totalLimit)} hint="Total" iconClassName="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300" />
                   <WalletSummaryCard icon={Wallet} label="Cartões" value={String(cardsKpis.cardsCount)} hint="Cadastrados" iconClassName="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300" />
                   <WalletSummaryCard icon={DollarSign} label="Uso no Mês" value={formatCurrency(cardsKpis.usedMonth)} hint="Neste mês" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
@@ -1364,7 +1364,7 @@ const Carteira = () => {
           </>
          ) : (
           <>
-            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
+            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 pt-8 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
               <WalletSummaryCard icon={Wallet} label="Saldo Total" value={formatCurrency(accountsKpis.realBalance)} hint="Saldo consolidado" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
               <WalletSummaryCard icon={Building2} label="Contas Ativas" value={String(accountsKpis.accountsCount)} hint="Cadastradas" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-600" />
               <WalletSummaryCard icon={TrendingUp} label="Saldo Positivo" value={formatCurrency(accountBalanceGroups.positive)} hint="Contas no positivo" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" valueClassName="text-emerald-500" />
