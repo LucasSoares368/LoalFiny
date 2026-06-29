@@ -126,12 +126,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white/95 shadow-sm backdrop-blur transition-[transform,width] duration-300 lg:translate-x-0 ${
-          isSidebarCollapsed ? "lg:w-20" : "lg:w-64"
+          isSidebarCollapsed ? "lg:w-24" : "lg:w-64"
         } ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${isSidebarCollapsed ? "lg:justify-center lg:px-3" : "justify-between"}`}>
+        <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${isSidebarCollapsed ? "lg:justify-between lg:px-2" : "justify-between"}`}>
           <Link to="/dashboard" className={`flex min-w-0 items-center ${isSidebarCollapsed ? "lg:hidden" : ""}`} onClick={closeMobileMenu}>
             <img src="/brand/logo.png" alt="LocalFiny" className="h-10 w-auto max-w-[170px] object-contain" />
           </Link>
@@ -145,9 +145,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             type="button"
             variant="ghost"
             size="icon"
-            className={`hidden h-10 w-10 rounded-xl bg-[#FF6A00] text-white shadow-sm hover:bg-[#e85f00] lg:inline-flex ${
-              isSidebarCollapsed ? "lg:absolute lg:left-[4.75rem] lg:top-3" : ""
-            }`}
+            className="hidden h-10 w-10 rounded-xl bg-[#FF6A00] text-white shadow-sm hover:bg-[#e85f00] lg:inline-flex"
             onClick={toggleSidebar}
             aria-label={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
             title={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
@@ -242,7 +240,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </aside>
 
-      <main className={`min-h-screen transition-[padding] duration-300 ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"}`}>{children}</main>
+      <main className={`min-h-screen transition-[padding] duration-300 ${isSidebarCollapsed ? "lg:pl-24" : "lg:pl-64"}`}>{children}</main>
     </div>
   );
 };
