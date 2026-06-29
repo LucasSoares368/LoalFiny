@@ -52,6 +52,7 @@ import {
   Edit,
   Landmark,
   Loader2,
+  MoreVertical,
   Plus,
   Search,
   Trash,
@@ -867,6 +868,18 @@ const Carteira = () => {
     return byAccount;
   }, [accounts, receivedIncomeByAccount]);
 
+  const accountBalanceGroups = useMemo(() => {
+    let positive = 0;
+    let negative = 0;
+
+    for (const value of Object.values(currentBalanceByAccount)) {
+      if (value >= 0) positive += value;
+      else negative += Math.abs(value);
+    }
+
+    return { positive, negative };
+  }, [currentBalanceByAccount]);
+
   const resolvedBankSlug = useMemo(
     () => resolveBankSlug(cardForm.bank_name, cardForm.bank_code) || cardForm.bank_slug || null,
     [cardForm.bank_name, cardForm.bank_code, cardForm.bank_slug]
@@ -1177,8 +1190,44 @@ const Carteira = () => {
                   <WalletSummaryCard icon={DollarSign} label="Uso no Mês" value={formatCurrency(cardsKpis.usedMonth)} hint="Neste mês" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
                   <WalletSummaryCard icon={Building2} label="Disponível" value={formatCurrency(cardsKpis.available)} hint="Limite restante" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
                 </div>
-                <div className="h-8" />
-                <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
+                <div className="relative mt-8 max-w-xl">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                  <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar cartões..." readOnly />
+                </div>
+                <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  {cardsWithUsage.map((card) => (
+                    <Card key={card.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+                      <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: card.brand_color || "#FF6A00" }} />
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-4">
+                          <BankLogoBadge bankName={card.bank_name || card.issuer_bank || card.name} bankCode={card.bank_code} bankSlug={card.bank_slug} size="lg" />
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-bold text-slate-950 dark:text-slate-100">{card.name}</p>
+                            <p className="truncate text-base text-slate-500 dark:text-slate-400">Cartão de Crédito</p>
+                            <p className="truncate text-sm text-slate-500 dark:text-slate-400">Fecha dia {card.closing_day} • Vence dia {card.due_day}</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-start gap-4 text-right">
+                          <div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Disponível</p>
+                            <p className="text-xl font-bold tabular-nums text-emerald-500">{formatCurrency(card.available)}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => openEditCard(card.id)} aria-label="Editar cartão">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-5">
+                        <UtilizationBar value={card.utilization} brandColor={card.brand_color} />
+                        <div className="mt-2 flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                          <span>Uso: {formatCurrency(card.usedMonth)}</span>
+                          <span>Limite: {formatCurrency(card.credit_limit)}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                <Card className="hidden overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
                     <Table>
                       <TableHeader>
@@ -1309,7 +1358,13 @@ const Carteira = () => {
           </>
          ) : (
           <>
-            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-5`}>
+            <div className={`${accounts.length === 0 ? "hidden" : "grid"} grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4`}>
+              <WalletSummaryCard icon={Wallet} label="Saldo Total" value={formatCurrency(accountsKpis.realBalance)} hint="Saldo consolidado" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
+              <WalletSummaryCard icon={Building2} label="Contas Ativas" value={String(accountsKpis.accountsCount)} hint="Cadastradas" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
+              <WalletSummaryCard icon={TrendingUp} label="Saldo Positivo" value={formatCurrency(accountBalanceGroups.positive)} hint="Contas no positivo" iconClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300" />
+              <WalletSummaryCard icon={TrendingDown} label="Saldo Negativo" value={formatCurrency(accountBalanceGroups.negative)} hint="Contas no negativo" iconClassName="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" />
+            </div>
+            <div className="hidden">
               <WalletSummaryCard
                 icon={DollarSign}
                 label="Saldo Total"
@@ -1328,12 +1383,54 @@ const Carteira = () => {
               <WalletSummaryCard icon={Building2} label="Maior Saldo" value={accountsKpis.highest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.highest.id] || 0)) : "-"} hint={accountsKpis.highest?.name || "Sem conta"} iconClassName="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" />
               <WalletSummaryCard icon={Building2} label="Menor Saldo" value={accountsKpis.lowest ? formatCurrency(Number(currentBalanceByAccount[accountsKpis.lowest.id] || 0)) : "-"} hint={accountsKpis.lowest?.name || "Sem conta"} iconClassName="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" />
             </div>
-            {accounts.length > 0 ? <div className="h-8" /> : null}
+            {accounts.length > 0 ? (
+              <>
+                <div className="relative mt-8 max-w-xl">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                  <Input className="h-12 rounded-2xl border-slate-200 bg-white/80 pl-12 text-base shadow-sm dark:border-slate-700 dark:bg-slate-900" placeholder="Buscar bancos..." readOnly />
+                </div>
+                <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  {accounts.map((account) => {
+                    const balance = Number(currentBalanceByAccount[account.id] || 0);
+                    const bankSlug = resolveBankSlug(account.bank_name);
+                    const bankAsset = getBankAssetBySlug(bankSlug);
+                    const accentColor = bankAsset?.color || generateBankColor(account.bank_name);
+
+                    return (
+                      <Card key={account.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+                        <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: accentColor }} />
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex min-w-0 items-center gap-4">
+                            <BankLogoBadge bankName={account.bank_name} bankSlug={bankSlug} size="lg" />
+                            <div className="min-w-0">
+                              <p className="truncate text-lg font-bold text-slate-950 dark:text-slate-100">{account.name}</p>
+                              <p className="truncate text-base text-slate-500 dark:text-slate-400">{contaTipoLabel[account.account_type]}</p>
+                              <p className="truncate text-sm text-slate-500 dark:text-slate-400">{account.bank_name}</p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-start gap-4 text-right">
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">Saldo</p>
+                              <p className={`text-xl font-bold tabular-nums ${balance < 0 ? "text-red-500" : "text-emerald-500"}`}>
+                                {formatCurrency(balance)}
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => openEditAccount(account.id)} aria-label="Editar conta">
+                              <MoreVertical className="h-5 w-5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
             <div>
               {accounts.length === 0 ? (
                 <EmptyWalletPage kind="accounts" onAction={openCreateDialog} periodControl={periodControl} />
              ) : (
-                <Card className="overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
+                <Card className="hidden overflow-hidden border border-slate-200 shadow-sm dark:border-slate-700">
                   <div className="hidden md:block">
                     <Table>
                       <TableHeader>
