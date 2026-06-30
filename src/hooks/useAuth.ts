@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 type User = {
   id: string;
@@ -79,6 +80,8 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    queryClient.clear();
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -93,6 +96,8 @@ export const useAuth = () => {
       return { error };
     }
 
+    queryClient.clear();
+
     toast({
       title: "Login realizado com sucesso!",
       description: "Bem-vindo de volta!",
@@ -102,7 +107,9 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
+    queryClient.clear();
     const { error } = await supabase.auth.signOut();
+    queryClient.clear();
 
     if (error) {
       toast({
