@@ -15,7 +15,7 @@ import {
   Landmark,
   Loader2,
   Lock,
-  Map,
+  MapIcon,
   Medal,
   PiggyBank,
   Receipt,
@@ -81,7 +81,7 @@ const categories: Record<AchievementCategory, { label: string; description: stri
   organization: {
     label: "Organização",
     description: "Estrutura que deixa o painel mais confiável.",
-    icon: Map,
+    icon: MapIcon,
   },
 };
 
