@@ -92,6 +92,7 @@ export default function Notes() {
     colorName: "Amarelo", // Store color name instead of value
   });
   const [saving, setSaving] = useState(false);
+  const cardClass = "rounded-2xl border-border/80 bg-card shadow-sm";
 
   const loadNotes = useCallback(async () => {
     try {
@@ -247,33 +248,33 @@ export default function Notes() {
         transition={{ duration: 0.2 }}
       >
         <Card
-          className="cursor-pointer hover:shadow-lg transition-all group relative overflow-hidden"
+          className="group relative min-h-[210px] cursor-pointer overflow-hidden rounded-2xl border-border/80 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
           style={{ backgroundColor: themedColor }}
           onClick={() => openEditNote(note)}
         >
         {note.is_pinned && (
-          <div className="absolute top-2 right-2">
-            <Pin className="h-4 w-4 text-primary fill-primary" />
+          <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-background/70 text-primary shadow-sm backdrop-blur">
+            <Pin className="h-4 w-4 fill-primary" />
           </div>
         )}
-        <CardHeader className="pb-2">
-          <h3 className="font-semibold text-foreground line-clamp-1 pr-6">
+        <CardHeader className="pb-3">
+          <h3 className="line-clamp-1 pr-8 text-lg font-bold text-foreground">
             {note.title}
           </h3>
         </CardHeader>
         <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground line-clamp-3 min-h-[3rem]">
+          <p className="min-h-[4.5rem] text-sm leading-6 text-muted-foreground line-clamp-3">
             {note.content || "Sem conteúdo"}
           </p>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-foreground/10">
+          <div className="mt-4 flex items-center justify-between border-t border-foreground/10 pt-3">
             <span className="text-xs text-muted-foreground">
               {format(new Date(note.updated_at), "dd MMM yyyy", { locale: ptBR })}
             </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-8 w-8 rounded-full bg-background/50 hover:bg-background"
                 onClick={(e) => {
                   e.stopPropagation();
                   togglePin(note);
@@ -288,7 +289,7 @@ export default function Notes() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
+                className="h-8 w-8 rounded-full bg-background/50 text-destructive hover:bg-background hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
                   confirmDelete(note.id);
@@ -296,7 +297,7 @@ export default function Notes() {
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
-            </div>
+          </div>
           </div>
         </CardContent>
       </Card>
@@ -319,51 +320,55 @@ export default function Notes() {
 
   return (
     <AppLayout title="Bloco de Notas">
-      <div className="space-y-6">
+      <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <StickyNote className="h-6 w-6 text-primary" />
-              Bloco de Notas
-            </h1>
-            <p className="text-muted-foreground">
-              Suas anotações pessoais
-            </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <StickyNote className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
+                Bloco de Notas
+              </h1>
+              <p className="mt-1 max-w-2xl text-lg text-muted-foreground">
+                Guarde ideias, lembretes e observações importantes em um só lugar.
+              </p>
+            </div>
           </div>
-          <Button onClick={openNewNote}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={openNewNote} className="h-12 rounded-2xl px-6 text-base font-bold">
+            <Plus className="mr-2 h-4 w-4" />
             Nova Nota
           </Button>
         </div>
 
         {/* Search */}
-        <div className="relative max-w-md">
+        <div className="relative max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar notas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="h-12 rounded-2xl pl-10 shadow-sm"
           />
         </div>
 
         {/* Notes Grid */}
         {notes.length === 0 ? (
-          <Card className="p-12 text-center">
-            <StickyNote className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nenhuma nota ainda</h3>
-            <p className="text-muted-foreground mb-4">
+          <Card className={`${cardClass} p-12 text-center`}>
+            <StickyNote className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
+            <h3 className="mb-2 text-xl font-bold">Nenhuma nota ainda</h3>
+            <p className="mb-5 text-muted-foreground">
               Crie sua primeira nota para começar a organizar suas ideias
             </p>
-            <Button onClick={openNewNote}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={openNewNote} className="h-12 rounded-2xl px-6 font-bold">
+              <Plus className="mr-2 h-4 w-4" />
               Criar Primeira Nota
             </Button>
           </Card>
         ) : filteredNotes.length === 0 ? (
-          <Card className="p-8 text-center">
-            <Search className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+          <Card className={`${cardClass} p-10 text-center`}>
+            <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
             <p className="text-muted-foreground">
               Nenhuma nota encontrada para "{searchQuery}"
             </p>
@@ -373,11 +378,11 @@ export default function Notes() {
             {/* Pinned Notes */}
             {pinnedNotes.length > 0 && (
               <div>
-                <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                <h2 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">
                   <Pin className="h-4 w-4" />
                   Fixadas
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   <AnimatePresence>
                     {pinnedNotes.map((note) => (
                       <NoteCard key={note.id} note={note} />
@@ -391,11 +396,11 @@ export default function Notes() {
             {unpinnedNotes.length > 0 && (
               <div>
                 {pinnedNotes.length > 0 && (
-                  <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                  <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
                     Outras notas
                   </h2>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   <AnimatePresence>
                     {unpinnedNotes.map((note) => (
                       <NoteCard key={note.id} note={note} />
@@ -410,7 +415,7 @@ export default function Notes() {
 
       {/* Note Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="rounded-2xl sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingNote ? "Editar Nota" : "Nova Nota"}
@@ -424,7 +429,7 @@ export default function Notes() {
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                className="text-lg font-medium"
+                className="h-12 rounded-2xl text-lg font-semibold"
                 style={{ backgroundColor: getColorValue(formData.colorName) }}
               />
             </div>
@@ -435,7 +440,7 @@ export default function Notes() {
                 onChange={(e) =>
                   setFormData({ ...formData, content: e.target.value })
                 }
-                className="min-h-[200px] resize-none"
+                className="min-h-[220px] resize-none rounded-2xl"
                 style={{ backgroundColor: getColorValue(formData.colorName) }}
               />
             </div>
@@ -452,7 +457,7 @@ export default function Notes() {
                     onClick={() =>
                       setFormData({ ...formData, colorName: colorOption.name })
                     }
-                    className={`h-8 w-8 rounded-full border-2 transition-all ${
+                    className={`h-9 w-9 rounded-full border-2 transition-all ${
                       formData.colorName === colorOption.name
                         ? "border-primary ring-2 ring-primary/30 scale-110"
                         : "border-border hover:border-primary/50"
@@ -465,12 +470,12 @@ export default function Notes() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              <X className="h-4 w-4 mr-2" />
+            <Button variant="outline" className="rounded-xl" onClick={() => setDialogOpen(false)}>
+              <X className="mr-2 h-4 w-4" />
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button className="rounded-xl" onClick={handleSave} disabled={saving}>
+              <Save className="mr-2 h-4 w-4" />
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -479,7 +484,7 @@ export default function Notes() {
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir nota?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -488,10 +493,10 @@ export default function Notes() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
             </AlertDialogAction>
