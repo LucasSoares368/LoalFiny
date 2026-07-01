@@ -1,12 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { goToAppAuth } from "@/lib/app-url";
 
 const CTASection = () => {
-  const navigate = useNavigate();
-
   return (
     <section className="relative py-24 sm:py-32 overflow-hidden bg-background">
       {/* Background patterns */}
@@ -66,7 +64,7 @@ const CTASection = () => {
               >
                 <Button 
                   size="lg" 
-                  onClick={() => navigate("/auth")}
+                  onClick={goToAppAuth}
                   className="bg-white text-primary hover:bg-white/90 text-lg font-black h-16 px-12 rounded-2xl shadow-2xl shadow-black/20 active:scale-95 transition-all w-full sm:w-auto"
                 >
                   Criar Conta Agora

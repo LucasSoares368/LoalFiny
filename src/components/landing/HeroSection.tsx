@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, TrendingUp, TrendingDown, Target, CreditCard, PieChart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
+import { goToAppAuth } from "@/lib/app-url";
 
 // Animated fake cursor component
 const FakeCursor = ({ positions, screenIndex }: { positions: { x: number; y: number; click?: boolean }[]; screenIndex: number }) => {
@@ -384,7 +384,6 @@ const screens = [
 ];
 
 const HeroSection = () => {
-  const navigate = useNavigate();
   const [activeScreen, setActiveScreen] = useState(0);
 
   useEffect(() => {
@@ -466,7 +465,7 @@ const HeroSection = () => {
           >
             <Button
               size="lg"
-              onClick={() => navigate("/auth")}
+              onClick={goToAppAuth}
               className="relative overflow-hidden group bg-primary text-primary-foreground hover:bg-primary/90 text-lg h-14 px-10 rounded-xl shadow-2xl shadow-primary/20 w-full sm:w-auto transition-all duration-300 active:scale-95"
             >
               <span className="relative z-10 flex items-center gap-2">

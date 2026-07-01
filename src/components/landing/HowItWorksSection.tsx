@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, LayoutDashboard, Target, PieChart, Wallet, TrendingUp } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { goToAppAuth } from "@/lib/app-url";
 
 const steps = [
   {
@@ -63,8 +63,6 @@ const steps = [
 ];
 
 const HowItWorksSection = () => {
-  const navigate = useNavigate();
-
   return (
     <section id="how-it-works" className="relative py-24 sm:py-32 overflow-hidden bg-background">
       <div className="container mx-auto px-4">
@@ -156,7 +154,7 @@ const HowItWorksSection = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button 
                   size="lg"
-                  onClick={() => navigate("/auth")}
+                  onClick={goToAppAuth}
                   className="bg-primary text-white hover:bg-primary/90 h-14 px-10 rounded-xl font-black shadow-xl shadow-primary/20 transition-all active:scale-95 w-full sm:w-auto"
                 >
                   Começar Jornada Agora

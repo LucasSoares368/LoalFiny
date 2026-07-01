@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
+import { goToAppAuth } from "@/lib/app-url";
 // Logo import removed as we now use text branding
 
 const Header = () => {
@@ -57,13 +58,13 @@ const Header = () => {
             <div className="h-4 w-px bg-border mx-2" />
             <Button 
               variant="ghost" 
-              onClick={() => navigate("/auth")}
+              onClick={goToAppAuth}
               className="font-bold text-sm hover:text-primary transition-colors"
             >
               Entrar
             </Button>
             <Button 
-              onClick={() => navigate("/auth")}
+              onClick={goToAppAuth}
               className="bg-primary text-white hover:bg-primary/90 rounded-xl px-6 font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all"
             >
               Começar Agora
@@ -107,11 +108,11 @@ const Header = () => {
                 ))}
               </nav>
               <div className="flex flex-col gap-3">
-                <Button variant="outline" onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl font-bold">
+                <Button variant="outline" onClick={goToAppAuth} className="w-full h-12 rounded-xl font-bold">
                   Entrar
                 </Button>
                 <Button 
-                  onClick={() => navigate("/auth")}
+                  onClick={goToAppAuth}
                   className="w-full bg-primary text-white h-12 rounded-xl font-bold shadow-lg shadow-primary/20"
                 >
                   Criar Conta Grátis

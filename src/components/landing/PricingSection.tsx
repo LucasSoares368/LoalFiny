@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, Crown, Zap, Star, Loader2, Shield, Target } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { goToAppAuth } from "@/lib/app-url";
 
 interface Plan {
   id: string;
@@ -46,7 +46,6 @@ const planConfig: Record<string, { icon: any; popular: boolean; cta: string }> =
 };
 
 const PricingSection = () => {
-  const navigate = useNavigate();
   const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +228,7 @@ const PricingSection = () => {
                     </ul>
 
                     <Button
-                      onClick={() => navigate("/auth")}
+                      onClick={goToAppAuth}
                       className={`w-full h-14 rounded-2xl text-base font-bold transition-all duration-300 ${
                         config.popular 
                           ? "bg-primary text-white hover:bg-primary/90 shadow-xl shadow-primary/30" 
