@@ -125,7 +125,7 @@ export const TABLE_COLUMNS = {
   transactions: [
     "amount", "bank_id", "business_amount", "category_id", "created_at", "date", "description", "id", "income_type",
     "is_essential", "personal_amount", "profile_type", "reserve_amount", "split_applied", "tags", "transaction_time",
-    "type", "updated_at", "user_id",
+    "payment_method", "type", "updated_at", "user_id",
   ],
   user_balance: ["available_balance", "created_at", "id", "updated_at", "user_id"],
   user_roles: ["created_at", "id", "role", "user_id"],

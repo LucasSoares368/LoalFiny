@@ -69,8 +69,25 @@ async function runSqlFileIfExists(filePath) {
   }
 }
 
+async function ensureColumn(tableName, columnName, definition) {
+  const rows = await query(
+    `select column_name
+       from information_schema.columns
+      where table_schema = database()
+        and table_name = ?
+        and column_name = ?
+      limit 1`,
+    [tableName, columnName],
+  );
+
+  if (!rows.length) {
+    await query(`alter table ${tableName} add column ${columnName} ${definition}`);
+  }
+}
+
 async function runMigrations() {
   await runSqlFileIfExists(path.join(__dirname, "..", "database", "mysql", "localfiny_2_0.sql"));
+  await ensureColumn("transactions", "payment_method", "varchar(50) null after bank_id");
 }
 
 const marketQuoteSymbols = [

@@ -133,6 +133,11 @@ const Transactions = () => {
       return;
     }
 
+    if (!formData.bankId) {
+      toast.error("Selecione o banco ou cartão da transação");
+      return;
+    }
+
     setLoading(true);
     try {
       const {
@@ -140,7 +145,7 @@ const Transactions = () => {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      const selectedBankId = formData.paymentMethod === "bank" ? formData.bankId || null : null;
+      const selectedBankId = formData.bankId;
 
       const { error } = await supabase.from("transactions").insert({
         user_id: user.id,
@@ -152,6 +157,7 @@ const Transactions = () => {
         transaction_time: formData.time || null,
         profile_type: currentProfile,
         bank_id: selectedBankId,
+        payment_method: formData.paymentMethod,
         is_essential: formData.type === "expense" ? formData.isEssential : null,
       });
 
@@ -355,16 +361,42 @@ const Transactions = () => {
               </div>
 
               <div className="space-y-2 lg:col-span-4">
-                <Label htmlFor="bank">Meio de pagamento</Label>
+                <Label htmlFor="bank">Banco/Cartão *</Label>
                 <Select
-                  value={formData.paymentMethod === "bank" ? formData.bankId : formData.paymentMethod}
-                  onValueChange={(value) => {
-                    if (["pix", "cash", "card"].includes(value)) {
-                      setFormData({ ...formData, paymentMethod: value, bankId: "" });
-                      return;
-                    }
-                    setFormData({ ...formData, paymentMethod: "bank", bankId: value });
-                  }}
+                  value={formData.bankId || undefined}
+                  onValueChange={(value) => setFormData({ ...formData, bankId: value })}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Selecione uma conta ou cartão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks.filter((bank) => bank.is_active).map((bank) => (
+                      <SelectItem key={bank.id} value={bank.id}>
+                        <div className="flex items-center gap-2">
+                          {bank.account_type === "credit_card" ? (
+                            <CreditCard className="h-4 w-4" style={{ color: bank.color }} />
+                          ) : (
+                            <Landmark className="h-4 w-4" style={{ color: bank.color }} />
+                          )}
+                          <span>{bank.name}</span>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {bank.account_type === "credit_card" ? "Cartão" : "Banco"}
+                          </span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            R$ {formatBalance(bank.current_balance)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 lg:col-span-4">
+                <Label htmlFor="payment_method">Meio de pagamento *</Label>
+                <Select
+                  value={formData.paymentMethod}
+                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
                 >
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Selecione o meio de pagamento" />
@@ -376,29 +408,30 @@ const Transactions = () => {
                         Pix
                       </div>
                     </SelectItem>
+                    <SelectItem value="debit">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Débito
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="credit">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Crédito
+                      </div>
+                    </SelectItem>
                     <SelectItem value="cash">
                       <div className="flex items-center gap-2">
                         <Banknote className="h-4 w-4" />
                         Dinheiro
                       </div>
                     </SelectItem>
-                    <SelectItem value="card">
+                    <SelectItem value="transfer">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        Cartão
+                        <Landmark className="h-4 w-4" />
+                        Transferência
                       </div>
                     </SelectItem>
-                    {banks.filter((bank) => bank.is_active).map((bank) => (
-                      <SelectItem key={bank.id} value={bank.id}>
-                        <div className="flex items-center gap-2">
-                          <Landmark className="h-4 w-4" style={{ color: bank.color }} />
-                          <span>{bank.name}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            R$ {formatBalance(bank.current_balance)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>
