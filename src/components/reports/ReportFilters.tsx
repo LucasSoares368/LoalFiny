@@ -47,7 +47,7 @@ interface ReportFiltersProps {
   profileType: FinancialProfile;
   filters: ReportFiltersState;
   onFiltersChange: (filters: ReportFiltersState) => void;
-  onApplyFilters: () => void;
+  onApplyFilters: (filters?: ReportFiltersState) => void;
 }
 
 export const defaultFilters: ReportFiltersState = {
@@ -103,7 +103,7 @@ export const ReportFilters = ({
 
   const handleClearFilters = () => {
     onFiltersChange(defaultFilters);
-    onApplyFilters();
+    onApplyFilters(defaultFilters);
   };
 
   const hasActiveFilters = 
@@ -121,8 +121,8 @@ export const ReportFilters = ({
     (filters.minAmount || filters.maxAmount ? 1 : 0);
 
   return (
-    <Card className="border-border/50">
-      <CardContent className="p-4">
+    <Card className="rounded-2xl border-border/80 shadow-sm">
+      <CardContent className="p-5">
         {/* Quick Transaction Type Filter - Always Visible */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <span className="text-sm font-medium text-muted-foreground">Tipo:</span>
@@ -131,10 +131,11 @@ export const ReportFilters = ({
               variant={filters.transactionType === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                onFiltersChange({ ...filters, transactionType: "all" });
-                onApplyFilters();
+                const nextFilters = { ...filters, transactionType: "all" as const };
+                onFiltersChange(nextFilters);
+                onApplyFilters(nextFilters);
               }}
-              className="h-8"
+              className="h-9 rounded-xl"
             >
               Todas
             </Button>
@@ -142,11 +143,12 @@ export const ReportFilters = ({
               variant={filters.transactionType === "income" ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                onFiltersChange({ ...filters, transactionType: "income" });
-                onApplyFilters();
+                const nextFilters = { ...filters, transactionType: "income" as const };
+                onFiltersChange(nextFilters);
+                onApplyFilters(nextFilters);
               }}
               className={cn(
-                "h-8 gap-1",
+                "h-9 gap-1 rounded-xl",
                 filters.transactionType === "income" && "bg-success hover:bg-success/90"
               )}
             >
@@ -157,11 +159,12 @@ export const ReportFilters = ({
               variant={filters.transactionType === "expense" ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                onFiltersChange({ ...filters, transactionType: "expense" });
-                onApplyFilters();
+                const nextFilters = { ...filters, transactionType: "expense" as const };
+                onFiltersChange(nextFilters);
+                onApplyFilters(nextFilters);
               }}
               className={cn(
-                "h-8 gap-1",
+                "h-9 gap-1 rounded-xl",
                 filters.transactionType === "expense" && "bg-danger hover:bg-danger/90"
               )}
             >
@@ -214,8 +217,9 @@ export const ReportFilters = ({
                 <X
                   className="h-3 w-3 cursor-pointer hover:text-destructive"
                   onClick={() => {
-                    onFiltersChange({ ...filters, categories: [] });
-                    onApplyFilters();
+                    const nextFilters = { ...filters, categories: [] };
+                    onFiltersChange(nextFilters);
+                    onApplyFilters(nextFilters);
                   }}
                 />
               </Badge>
@@ -229,8 +233,9 @@ export const ReportFilters = ({
                 <X
                   className="h-3 w-3 cursor-pointer hover:text-destructive"
                   onClick={() => {
-                    onFiltersChange({ ...filters, dateFrom: undefined, dateTo: undefined });
-                    onApplyFilters();
+                    const nextFilters = { ...filters, dateFrom: undefined, dateTo: undefined };
+                    onFiltersChange(nextFilters);
+                    onApplyFilters(nextFilters);
                   }}
                 />
               </Badge>
@@ -241,8 +246,9 @@ export const ReportFilters = ({
                 <X
                   className="h-3 w-3 cursor-pointer hover:text-destructive"
                   onClick={() => {
-                    onFiltersChange({ ...filters, minAmount: "", maxAmount: "" });
-                    onApplyFilters();
+                    const nextFilters = { ...filters, minAmount: "", maxAmount: "" };
+                    onFiltersChange(nextFilters);
+                    onApplyFilters(nextFilters);
                   }}
                 />
               </Badge>
@@ -263,8 +269,8 @@ export const ReportFilters = ({
                   {categories.map((category) => (
                     <label
                       key={category.id}
-                      className={cn(
-                        "flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors text-sm",
+                    className={cn(
+                        "flex items-center gap-2 rounded-xl border p-2 text-sm transition-colors cursor-pointer",
                         filters.categories.includes(category.id)
                           ? "border-primary bg-primary/10"
                           : "border-border hover:bg-muted/50"
@@ -291,7 +297,7 @@ export const ReportFilters = ({
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "h-11 w-full justify-start rounded-xl text-left font-normal",
                         !filters.dateFrom && "text-muted-foreground"
                       )}
                     >
@@ -324,7 +330,7 @@ export const ReportFilters = ({
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "h-11 w-full justify-start rounded-xl text-left font-normal",
                         !filters.dateTo && "text-muted-foreground"
                       )}
                     >
@@ -396,7 +402,7 @@ export const ReportFilters = ({
 
             {/* Apply Button */}
             <div className="flex justify-end pt-2">
-              <Button onClick={onApplyFilters} className="gap-2">
+              <Button onClick={() => onApplyFilters(filters)} className="h-11 gap-2 rounded-xl px-6">
                 <Filter className="h-4 w-4" />
                 Aplicar Filtros
               </Button>

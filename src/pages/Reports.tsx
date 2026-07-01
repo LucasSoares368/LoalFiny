@@ -4,8 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PieChart as PieChartIcon, List, User, Building2, CalendarDays, Search } from "lucide-react";
+import {
+  Download,
+  PieChart as PieChartIcon,
+  List,
+  CalendarDays,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { TransactionsList } from "@/components/TransactionsList";
 import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
@@ -16,15 +26,49 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
 
+interface CategorySummary {
+  name: string;
+  icon: string;
+  income: number;
+  expense: number;
+  total: number;
+  count: number;
+}
+
+const parseMoneyFilter = (value: string) => {
+  if (!value) return null;
+  const parsed = Number(value.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+const formatCsvCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const Reports = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<CategorySummary[]>([]);
   const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const [filters, setFilters] = useState<ReportFiltersState>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<ReportFiltersState>(defaultFilters);
   const [searchQuery, setSearchQuery] = useState("");
   const { loading: planLoading, canUseReports } = useUserPlan();
+
+  const totals = categoryData.reduce(
+    (acc, category) => ({
+      income: acc.income + category.income,
+      expense: acc.expense + category.expense,
+      balance: acc.balance + category.total,
+      count: acc.count + category.count,
+    }),
+    { income: 0, expense: 0, balance: 0, count: 0 },
+  );
 
   useEffect(() => {
     checkAuth();
@@ -35,23 +79,48 @@ const Reports = () => {
   }, [currentProfile, appliedFilters]);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) navigate("/auth");
   };
 
-  const handleApplyFilters = useCallback(() => {
-    setAppliedFilters({ ...filters });
+  const handleApplyFilters = useCallback((nextFilters?: ReportFiltersState) => {
+    setAppliedFilters({ ...(nextFilters || filters) });
   }, [filters]);
+
+  const applyFiltersToQuery = (query: any, activeFilters: ReportFiltersState) => {
+    let nextQuery = query;
+
+    if (activeFilters.categories.length > 0) {
+      nextQuery = nextQuery.in("category_id", activeFilters.categories);
+    }
+    if (activeFilters.transactionType !== "all") {
+      nextQuery = nextQuery.eq("type", activeFilters.transactionType);
+    }
+    if (activeFilters.dateFrom) {
+      nextQuery = nextQuery.gte("date", format(activeFilters.dateFrom, "yyyy-MM-dd"));
+    }
+    if (activeFilters.dateTo) {
+      nextQuery = nextQuery.lte("date", format(activeFilters.dateTo, "yyyy-MM-dd"));
+    }
+
+    const minAmount = parseMoneyFilter(activeFilters.minAmount);
+    const maxAmount = parseMoneyFilter(activeFilters.maxAmount);
+    if (minAmount !== null) nextQuery = nextQuery.gte("amount", minAmount);
+    if (maxAmount !== null) nextQuery = nextQuery.lte("amount", maxAmount);
+
+    return nextQuery;
+  };
 
   const loadReportData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Build query with filters
       let query = supabase
         .from("transactions")
         .select(`
@@ -65,63 +134,41 @@ const Reports = () => {
         .eq("user_id", user.id)
         .eq("profile_type", currentProfile);
 
-      // Apply category filter
-      if (appliedFilters.categories.length > 0) {
-        query = query.in("category_id", appliedFilters.categories);
-      }
+      query = applyFiltersToQuery(query, appliedFilters);
 
-      // Apply transaction type filter
-      if (appliedFilters.transactionType !== "all") {
-        query = query.eq("type", appliedFilters.transactionType);
-      }
+      const { data: transactions, error } = await query.order("date", { ascending: false });
+      if (error) throw error;
 
-      // Apply date filters
-      if (appliedFilters.dateFrom) {
-        query = query.gte("date", format(appliedFilters.dateFrom, "yyyy-MM-dd"));
-      }
-      if (appliedFilters.dateTo) {
-        query = query.lte("date", format(appliedFilters.dateTo, "yyyy-MM-dd"));
-      }
+      const categoryMap = new Map<string, CategorySummary>();
+      (transactions || []).forEach((transaction: any) => {
+        const categoryName = transaction.categories?.name || "Sem categoria";
+        if (!categoryMap.has(categoryName)) {
+          categoryMap.set(categoryName, {
+            name: categoryName,
+            icon: transaction.categories?.icon || "📦",
+            income: 0,
+            expense: 0,
+            total: 0,
+            count: 0,
+          });
+        }
 
-      // Apply amount filters
-      if (appliedFilters.minAmount) {
-        query = query.gte("amount", parseFloat(appliedFilters.minAmount));
-      }
-      if (appliedFilters.maxAmount) {
-        query = query.lte("amount", parseFloat(appliedFilters.maxAmount));
-      }
+        const category = categoryMap.get(categoryName)!;
+        const amount = Number(transaction.amount || 0);
+        category.count += 1;
 
-      const { data: transactions } = await query.order("date", { ascending: false });
+        if (transaction.type === "income") {
+          category.income += amount;
+          category.total += amount;
+        } else {
+          category.expense += amount;
+          category.total -= amount;
+        }
+      });
 
-      if (transactions) {
-        // Group by category
-        const categoryMap = new Map();
-        transactions.forEach(t => {
-          const categoryName = t.categories?.name || "Sem Categoria";
-          if (!categoryMap.has(categoryName)) {
-            categoryMap.set(categoryName, {
-              name: categoryName,
-              icon: t.categories?.icon || "📦",
-              income: 0,
-              expense: 0,
-              total: 0
-            });
-          }
-          const category = categoryMap.get(categoryName);
-          const amount = parseFloat(t.amount.toString());
-          if (t.type === "income") {
-            category.income += amount;
-            category.total += amount;
-          } else {
-            category.expense += amount;
-            category.total -= amount;
-          }
-        });
-
-        setCategoryData(Array.from(categoryMap.values()));
-      }
-    } catch (error) {
-      console.error("Error loading reports:", error);
+      setCategoryData(Array.from(categoryMap.values()).sort((a, b) => Math.abs(b.total) - Math.abs(a.total)));
+    } catch (error: any) {
+      toast.error("Erro ao carregar relatórios: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -129,10 +176,11 @@ const Reports = () => {
 
   const exportToCSV = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Build query with applied filters
       let query = supabase
         .from("transactions")
         .select(`
@@ -143,27 +191,9 @@ const Reports = () => {
         .eq("user_id", user.id)
         .eq("profile_type", currentProfile);
 
-      // Apply same filters as the report view
-      if (appliedFilters.categories.length > 0) {
-        query = query.in("category_id", appliedFilters.categories);
-      }
-      if (appliedFilters.transactionType !== "all") {
-        query = query.eq("type", appliedFilters.transactionType);
-      }
-      if (appliedFilters.dateFrom) {
-        query = query.gte("date", format(appliedFilters.dateFrom, "yyyy-MM-dd"));
-      }
-      if (appliedFilters.dateTo) {
-        query = query.lte("date", format(appliedFilters.dateTo, "yyyy-MM-dd"));
-      }
-      if (appliedFilters.minAmount) {
-        query = query.gte("amount", parseFloat(appliedFilters.minAmount));
-      }
-      if (appliedFilters.maxAmount) {
-        query = query.lte("amount", parseFloat(appliedFilters.maxAmount));
-      }
-
-      const { data: transactions } = await query.order("date", { ascending: false });
+      query = applyFiltersToQuery(query, appliedFilters);
+      const { data: transactions, error } = await query.order("date", { ascending: false });
+      if (error) throw error;
 
       if (!transactions || transactions.length === 0) {
         toast.error("Nenhuma transação para exportar");
@@ -172,48 +202,35 @@ const Reports = () => {
 
       const profileLabel = currentProfile === "personal" ? "Pessoal" : "Empresarial";
       const exportDate = format(new Date(), "dd/MM/yyyy 'às' HH:mm");
-
-      // Calculate totals
-      let totalIncome = 0;
-      let totalExpense = 0;
-      transactions.forEach(t => {
-        const amount = parseFloat(t.amount.toString());
-        if (t.type === "income") {
-          totalIncome += amount;
-        } else {
-          totalExpense += amount;
-        }
-      });
+      const totalIncome = transactions
+        .filter((transaction: any) => transaction.type === "income")
+        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+      const totalExpense = transactions
+        .filter((transaction: any) => transaction.type === "expense")
+        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
       const balance = totalIncome - totalExpense;
 
-      // Format currency
-      const formatCurrency = (value: number) => 
-        value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-      // Format date
       const formatDate = (dateStr: string) => {
-        const [year, month, day] = dateStr.split('-');
+        const [year, month, day] = dateStr.split("-");
         return `${day}/${month}/${year}`;
       };
 
-      // Build CSV content with proper formatting
-      const csvLines: string[] = [];
-      
-      // Header section
-      csvLines.push("RELATÓRIO FINANCEIRO - FINANCEIROPRO");
-      csvLines.push(`Perfil: ${profileLabel}`);
-      csvLines.push(`Exportado em: ${exportDate}`);
-      csvLines.push(`Total de transações: ${transactions.length}`);
-      csvLines.push("");
-      
-      // Filter info if any filters applied
-      const hasFilters = appliedFilters.categories.length > 0 || 
-        appliedFilters.transactionType !== "all" || 
-        appliedFilters.dateFrom || 
-        appliedFilters.dateTo || 
-        appliedFilters.minAmount || 
+      const csvLines: string[] = [
+        "RELATÓRIO FINANCEIRO - LOCALFINY",
+        `Perfil: ${profileLabel}`,
+        `Exportado em: ${exportDate}`,
+        `Total de transações: ${transactions.length}`,
+        "",
+      ];
+
+      const hasFilters =
+        appliedFilters.categories.length > 0 ||
+        appliedFilters.transactionType !== "all" ||
+        appliedFilters.dateFrom ||
+        appliedFilters.dateTo ||
+        appliedFilters.minAmount ||
         appliedFilters.maxAmount;
-      
+
       if (hasFilters) {
         csvLines.push("FILTROS APLICADOS:");
         if (appliedFilters.dateFrom || appliedFilters.dateTo) {
@@ -232,53 +249,42 @@ const Reports = () => {
         csvLines.push("");
       }
 
-      // Summary section
       csvLines.push("RESUMO");
-      csvLines.push(`Total de Receitas:,"R$ ${formatCurrency(totalIncome)}"`);
-      csvLines.push(`Total de Despesas:,"R$ ${formatCurrency(totalExpense)}"`);
-      csvLines.push(`Saldo:,"R$ ${formatCurrency(balance)}"`);
+      csvLines.push(`Total de Receitas:,"R$ ${formatCsvCurrency(totalIncome)}"`);
+      csvLines.push(`Total de Despesas:,"R$ ${formatCsvCurrency(totalExpense)}"`);
+      csvLines.push(`Saldo:,"R$ ${formatCsvCurrency(balance)}"`);
       csvLines.push("");
-      csvLines.push("");
-
-      // Transactions header
       csvLines.push("TRANSAÇÕES DETALHADAS");
-      csvLines.push("Data,Hora de Registro,Tipo,Valor,Categoria,Meio de Pagamento,Descrição");
-      
-      // Transaction rows
-      transactions.forEach(t => {
-        const createdTime = t.created_at ? format(new Date(t.created_at), "HH:mm:ss") : "";
+      csvLines.push("Data,Hora,Tipo,Valor,Categoria,Banco/Cartão,Meio de Pagamento,Descrição");
+
+      transactions.forEach((transaction: any) => {
         const row = [
-          formatDate(t.date),
-          createdTime,
-          t.type === "income" ? "Receita" : "Despesa",
-          `R$ ${formatCurrency(parseFloat(t.amount.toString()))}`,
-          t.categories?.name || "Sem Categoria",
-          t.banks?.name || "Dinheiro",
-          (t.description || "").replace(/"/g, '""') // Escape quotes
+          formatDate(transaction.date),
+          transaction.transaction_time ? transaction.transaction_time.slice(0, 5) : "",
+          transaction.type === "income" ? "Receita" : "Despesa",
+          `R$ ${formatCsvCurrency(Number(transaction.amount || 0))}`,
+          transaction.categories?.name || "Sem categoria",
+          transaction.banks?.name || "",
+          transaction.payment_method || "",
+          (transaction.description || "").replace(/"/g, '""'),
         ];
-        csvLines.push(row.map(cell => `"${cell}"`).join(","));
+        csvLines.push(row.map((cell) => `"${cell}"`).join(","));
       });
 
-      // Footer
-      csvLines.push("");
       csvLines.push("");
       csvLines.push("---");
       csvLines.push("Gerado automaticamente pelo LocalFiny");
 
-      const csvContent = csvLines.join("\n");
-
-      // Download file with BOM for Excel compatibility
-      const BOM = "\uFEFF";
-      const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      const fileName = `LocalFiny_${profileLabel}_${format(new Date(), "yyyy-MM-dd_HH-mm")}.csv`;
       link.setAttribute("href", url);
-      link.setAttribute("download", fileName);
+      link.setAttribute("download", `LocalFiny_${profileLabel}_${format(new Date(), "yyyy-MM-dd_HH-mm")}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       toast.success("Relatório exportado com sucesso!");
     } catch (error: any) {
@@ -286,37 +292,23 @@ const Reports = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando relatórios...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If reports are not enabled for this plan, show upgrade prompt (only after plan loaded)
   if (!planLoading && !canUseReports()) {
     return (
       <AppLayout title="Relatórios">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="mx-auto max-w-3xl space-y-6">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <PieChartIcon className="h-6 w-6 text-primary" />
+            <h1 className="flex items-center gap-2 text-3xl font-bold">
+              <PieChartIcon className="h-7 w-7 text-primary" />
               Relatórios
             </h1>
-            <p className="text-muted-foreground">
-              Análise detalhada das suas finanças
-            </p>
+            <p className="text-lg text-muted-foreground">Análise detalhada das suas finanças</p>
           </div>
-          
-          <UpgradePrompt 
+
+          <UpgradePrompt
             feature="Relatórios Financeiros"
-            description="Acesse relatórios detalhados, análises por categoria, exportação para CSV e muito mais. Tenha uma visão completa das suas finanças."
+            description="Acesse relatórios detalhados, análises por categoria, exportação para CSV e muito mais."
             requiredPlan="pro"
-            benefits={["Relatórios inteligentes", "Exportação PDF/Excel", "Projeção de fluxo de caixa", "Planejamento mensal"]}
+            benefits={["Relatórios inteligentes", "Exportação CSV", "Projeção de fluxo de caixa", "Planejamento mensal"]}
           />
         </div>
       </AppLayout>
@@ -324,34 +316,45 @@ const Reports = () => {
   }
 
   return (
-    <AppLayout 
+    <AppLayout
       showProfileSwitcher
       currentProfile={currentProfile}
       onProfileChange={setCurrentProfile}
       title="Relatórios"
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <PieChartIcon className="h-6 w-6 text-primary" />
-              Relatórios
-            </h1>
-            <p className="text-muted-foreground">
-              Análise detalhada das suas finanças
-            </p>
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="rounded-full bg-primary/10 p-4 text-primary">
+              <PieChartIcon className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Relatórios</h1>
+              <p className="text-lg text-muted-foreground">Análise detalhada das suas finanças</p>
+            </div>
           </div>
-          <Button 
-            onClick={exportToCSV}
-            className="bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 shrink-0"
-          >
+
+          <Button onClick={exportToCSV} className="h-12 shrink-0 rounded-2xl px-8 text-base font-bold">
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
           </Button>
         </div>
 
-        {/* Filters */}
+        {loading ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton key={item} className="h-32 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard title="Receitas" value={formatCurrency(totals.income)} icon={TrendingUp} tone="success" />
+            <SummaryCard title="Despesas" value={formatCurrency(totals.expense)} icon={TrendingDown} tone="danger" />
+            <SummaryCard title="Saldo" value={formatCurrency(totals.balance)} icon={Wallet} tone={totals.balance >= 0 ? "success" : "danger"} />
+            <SummaryCard title="Transações" value={String(totals.count)} icon={List} tone="primary" />
+          </div>
+        )}
+
         <ReportFilters
           profileType={currentProfile}
           filters={filters}
@@ -359,17 +362,17 @@ const Reports = () => {
           onApplyFilters={handleApplyFilters}
         />
 
-        <Tabs defaultValue="yearly" className="space-y-6 mt-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
-            <TabsTrigger value="yearly" className="gap-2">
+        <Tabs defaultValue="yearly" className="space-y-6">
+          <TabsList className="grid h-12 w-full max-w-xl grid-cols-3 rounded-2xl bg-muted p-1">
+            <TabsTrigger value="yearly" className="gap-2 rounded-xl">
               <CalendarDays className="h-4 w-4" />
               Anual
             </TabsTrigger>
-            <TabsTrigger value="summary" className="gap-2">
+            <TabsTrigger value="summary" className="gap-2 rounded-xl">
               <PieChartIcon className="h-4 w-4" />
               Resumo
             </TabsTrigger>
-            <TabsTrigger value="transactions" className="gap-2">
+            <TabsTrigger value="transactions" className="gap-2 rounded-xl">
               <List className="h-4 w-4" />
               Transações
             </TabsTrigger>
@@ -380,46 +383,45 @@ const Reports = () => {
           </TabsContent>
 
           <TabsContent value="summary" className="space-y-6">
-            {/* Summary by Category */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg sm:text-xl">Resumo por Categoria</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Visão geral das suas transações agrupadas por categoria
-                </CardDescription>
+            <Card className="rounded-2xl border-border/80 shadow-sm">
+              <CardHeader>
+                <CardTitle>Resumo por categoria</CardTitle>
+                <CardDescription>Visão geral das suas transações agrupadas por categoria</CardDescription>
               </CardHeader>
-              <CardContent className="px-3 sm:px-6">
-                {categoryData.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">
-                    Nenhuma transação registrada ainda
-                  </p>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((item) => (
+                      <Skeleton key={item} className="h-20 rounded-xl" />
+                    ))}
+                  </div>
+                ) : categoryData.length === 0 ? (
+                  <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+                    <PieChartIcon className="mb-4 h-16 w-16 text-muted-foreground/35" />
+                    <h3 className="text-xl font-bold">Nenhuma transação encontrada</h3>
+                    <p className="mt-2 text-muted-foreground">Ajuste os filtros ou registre novas transações.</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {categoryData.map((category, index) => (
-                      <div 
-                        key={index}
-                        className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        {/* Top Row: Icon + Name + Total */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="text-xl shrink-0">{category.icon}</div>
-                            <p className="font-semibold text-sm truncate">{category.name}</p>
+                    {categoryData.map((category) => (
+                      <div key={category.name} className="rounded-2xl border bg-card p-4 shadow-sm transition-colors hover:bg-muted/30">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
+                              {category.icon}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-bold">{category.name}</p>
+                              <p className="text-sm text-muted-foreground">{category.count} transação(ões)</p>
+                            </div>
                           </div>
-                          <p className={`text-base font-bold whitespace-nowrap shrink-0 ${
-                            category.total >= 0 ? "text-success" : "text-danger"
-                          }`}>
-                            {category.total >= 0 ? "+" : "-"}R$ {Math.abs(category.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <p className={`shrink-0 text-lg font-bold ${category.total >= 0 ? "text-success" : "text-danger"}`}>
+                            {category.total >= 0 ? "+" : "-"} {formatCurrency(Math.abs(category.total))}
                           </p>
                         </div>
-                        {/* Bottom Row: Income + Expense */}
-                        <div className="flex gap-4 text-xs text-muted-foreground mt-1 ml-8">
-                          <span className="text-success">
-                            Receita: R$ {category.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-danger">
-                            Despesa: R$ {category.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
+                        <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                          <span className="text-success">Receitas: {formatCurrency(category.income)}</span>
+                          <span className="text-danger">Despesas: {formatCurrency(category.expense)}</span>
                         </div>
                       </div>
                     ))}
@@ -427,53 +429,35 @@ const Reports = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* Export Options */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Exportar Dados</CardTitle>
-                <CardDescription>
-                  Faça backup dos seus dados financeiros
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button 
-                  onClick={exportToCSV}
-                  variant="outline"
-                  className="w-full justify-start"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar todas as transações (CSV)
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  O arquivo CSV pode ser aberto no Excel, Google Sheets ou qualquer editor de planilhas.
-                </p>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="transactions">
-            <Card>
+            <Card className="rounded-2xl border-border/80 shadow-sm">
               <CardHeader>
-                <CardTitle>Transações Filtradas</CardTitle>
+                <CardTitle>Transações filtradas</CardTitle>
                 <CardDescription>
-                  {appliedFilters.categories.length > 0 || appliedFilters.transactionType !== "all" || appliedFilters.dateFrom || appliedFilters.dateTo || appliedFilters.minAmount || appliedFilters.maxAmount
+                  {appliedFilters.categories.length > 0 ||
+                  appliedFilters.transactionType !== "all" ||
+                  appliedFilters.dateFrom ||
+                  appliedFilters.dateTo ||
+                  appliedFilters.minAmount ||
+                  appliedFilters.maxAmount
                     ? "Exibindo transações com base nos filtros aplicados"
                     : "Edite ou exclua suas transações"}
                 </CardDescription>
-                <div className="relative mt-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="relative mt-3 max-w-2xl">
+                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar por descrição..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="h-12 rounded-2xl pl-12 text-base"
                   />
                 </div>
               </CardHeader>
               <CardContent>
-                <TransactionsList 
-                  profileType={currentProfile} 
+                <TransactionsList
+                  profileType={currentProfile}
                   filters={{
                     categories: appliedFilters.categories,
                     transactionType: appliedFilters.transactionType,
@@ -490,6 +474,35 @@ const Reports = () => {
         </Tabs>
       </div>
     </AppLayout>
+  );
+};
+
+interface SummaryCardProps {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  tone: "success" | "danger" | "primary";
+}
+
+const SummaryCard = ({ title, value, icon: Icon, tone }: SummaryCardProps) => {
+  const toneClass = {
+    success: "text-success bg-success/10",
+    danger: "text-danger bg-danger/10",
+    primary: "text-primary bg-primary/10",
+  }[tone];
+
+  return (
+    <Card className="rounded-2xl border-border/80 shadow-sm">
+      <CardContent className="flex min-h-[128px] flex-col justify-between p-5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-semibold text-muted-foreground">{title}</span>
+          <div className={`rounded-xl p-3 ${toneClass}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+        <p className={`truncate text-2xl font-bold sm:text-3xl ${toneClass.split(" ")[0]}`}>{value}</p>
+      </CardContent>
+    </Card>
   );
 };
 
