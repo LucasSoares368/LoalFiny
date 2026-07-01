@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Calendar,
+  ChevronRight,
   Clock,
   Crown,
   DollarSign,
@@ -25,6 +26,7 @@ import { useTransacoes } from "@/hooks/useTransacoes";
 import { useProfile } from "@/hooks/useProfile";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { MarketQuote, useMarketQuotes } from "@/hooks/useMarketQuotes";
+import { generateBankColor, getBankAssetBySlug, getBankInitials, resolveBankSlug } from "@/lib/bankAssets";
 
 type Period = "dia" | "semana" | "mes" | "ano";
 
@@ -244,7 +246,7 @@ const Dashboard = () => {
 
         <div className="mb-5 grid gap-5 lg:grid-cols-3">
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
-            <SectionTitle icon={BarChart3} title="Distribuição financeira" subtitle="Comparativo entre perfil pessoal e empresarial" />
+            <SectionTitle icon={BarChart3} title="Distribuição Financeira" subtitle="Comparativo entre perfil pessoal e empresarial" />
             <Distribution
               label="Distribuição de receitas"
               personalAmount={data.receitas}
@@ -265,17 +267,35 @@ const Dashboard = () => {
           </Card>
 
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
-            <SectionTitle icon={Landmark} title="Meus bancos" subtitle="Cadastre seus bancos para ter uma visão unificada" />
-            <div className="mt-6 flex justify-center">
-              <Button className="rounded-full bg-[#FF6A00] px-6 font-bold hover:bg-[#e85f00]" onClick={() => navigate("/carteira")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Cadastrar banco
-              </Button>
-            </div>
+            <button type="button" onClick={() => navigate("/carteira")} className="flex w-full items-start justify-between gap-4 text-left">
+              <SectionTitle icon={Landmark} title="Meus Bancos" subtitle="Saldo Total" />
+              <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-400" />
+            </button>
+            <p className="mt-2 text-3xl font-bold text-[#FF6A00]">{hideValues ? maskMoney : formatCurrency(totalBankBalance)}</p>
+            {activeAccounts.length ? (
+              <>
+                <div className="mt-6 flex flex-wrap items-center gap-2">
+                  {activeAccounts.slice(0, 4).map((account) => (
+                    <DashboardBankChip key={account.id} bankName={account.bank_name} />
+                  ))}
+                </div>
+                <p className="mt-5 text-sm text-slate-500">
+                  {activeAccounts.length} conta{activeAccounts.length === 1 ? "" : "s"} ativa{activeAccounts.length === 1 ? "" : "s"}
+                </p>
+              </>
+            ) : (
+              <div className="mt-6">
+                <p className="text-sm text-slate-500">Cadastre seus bancos para ter uma visão unificada.</p>
+                <Button className="mt-5 rounded-full bg-[#FF6A00] px-6 font-bold hover:bg-[#e85f00]" onClick={() => navigate("/carteira")}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar banco
+                </Button>
+              </div>
+            )}
           </Card>
 
           <Card className="rounded-2xl border-[#FF6A00]/20 bg-white p-6 shadow-sm">
-            <SectionTitle icon={Target} title="Reserva de emergência" subtitle="Configure seus custos fixos" />
+            <SectionTitle icon={Target} title="Reserva de Emergência" subtitle="Configure seus custos fixos" />
             <p className="my-9 text-sm text-slate-500">Cadastre seus custos fixos para calcular a meta.</p>
             <Button variant="outline" className="h-11 w-full rounded-2xl font-bold" onClick={() => navigate("/metas")}>
               Configurar
@@ -503,6 +523,35 @@ const SectionTitle = ({ icon: Icon, title, subtitle }: { icon: React.ComponentTy
     <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
   </div>
 );
+
+const DashboardBankChip = ({ bankName }: { bankName: string }) => {
+  const slug = resolveBankSlug(bankName);
+  const asset = getBankAssetBySlug(slug);
+  const fallbackColor = asset?.color || generateBankColor(bankName);
+  const shortName = bankName
+    .replace(/^banco\s+/i, "")
+    .split(/\s+/)
+    .slice(0, 2)
+    .join(" ");
+
+  return (
+    <span className="inline-flex max-w-[150px] items-center gap-2 rounded-full bg-slate-50 px-2 py-1 text-sm font-bold text-slate-950">
+      <span
+        className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm"
+        style={asset?.logo ? undefined : { backgroundColor: fallbackColor }}
+      >
+        {asset?.logo ? (
+          <img src={asset.logo} alt="" className="h-5 w-5 object-contain" />
+        ) : (
+          <span className="text-[10px] font-black text-white">
+            {getBankInitials(bankName)}
+          </span>
+        )}
+      </span>
+      <span className="truncate">{shortName || "Banco"}</span>
+    </span>
+  );
+};
 
 const MiniMetric = ({
   title,
