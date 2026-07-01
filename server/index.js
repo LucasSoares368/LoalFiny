@@ -88,6 +88,10 @@ async function ensureColumn(tableName, columnName, definition) {
 async function runMigrations() {
   await runSqlFileIfExists(path.join(__dirname, "..", "database", "mysql", "localfiny_2_0.sql"));
   await ensureColumn("transactions", "payment_method", "varchar(50) null after bank_id");
+  await ensureColumn("debt_payments", "bank_id", "char(36) null after debt_id");
+  await ensureColumn("debt_payments", "transaction_id", "char(36) null after bank_id");
+  await ensureColumn("debt_payments", "payment_method", "varchar(50) null after payment_date");
+  await ensureColumn("debt_payments", "profile_type", "varchar(20) null after payment_method");
 }
 
 const marketQuoteSymbols = [

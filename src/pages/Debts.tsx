@@ -331,6 +331,7 @@ const Debts = () => {
 
       <DebtPaymentDialog
         debt={paymentDebt}
+        profileType={currentProfile}
         onClose={() => setPaymentDebt(null)}
         onSuccess={() => {
           setPaymentDebt(null);
