@@ -963,6 +963,23 @@ app.post("/api/storage/:bucket/upload", authRequired, upload.single("file"), asy
 
 const distPath = path.join(__dirname, "..", "dist");
 if (fs.existsSync(distPath)) {
+  const sendNoCacheStatic = (fileName) => (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.sendFile(path.join(distPath, fileName));
+  };
+
+  app.get("/sw.js", sendNoCacheStatic("sw.js"));
+  app.get("/registerSW.js", sendNoCacheStatic("registerSW.js"));
+  app.get("/workbox-:hash.js", (req, res) => {
+    const fileName = `workbox-${req.params.hash}.js`;
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.sendFile(path.join(distPath, fileName));
+  });
+
   app.use(
     express.static(distPath, {
       setHeaders: (res, filePath) => {
