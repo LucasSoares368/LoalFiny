@@ -58,6 +58,7 @@ const Reports = () => {
   const [filters, setFilters] = useState<ReportFiltersState>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<ReportFiltersState>(defaultFilters);
   const [searchQuery, setSearchQuery] = useState("");
+  const [accountBalance, setAccountBalance] = useState(0);
   const { loading: planLoading, canUseReports } = useUserPlan();
 
   const totals = categoryData.reduce(
@@ -138,6 +139,15 @@ const Reports = () => {
 
       const { data: transactions, error } = await query.order("date", { ascending: false });
       if (error) throw error;
+
+      const { data: bankRows, error: bankError } = await supabase
+        .from("banks")
+        .select("current_balance")
+        .eq("user_id", user.id)
+        .eq("profile_type", currentProfile)
+        .eq("is_active", true);
+      if (bankError) throw bankError;
+      setAccountBalance((bankRows || []).reduce((sum: number, bank: any) => sum + Number(bank.current_balance || 0), 0));
 
       const categoryMap = new Map<string, CategorySummary>();
       (transactions || []).forEach((transaction: any) => {
@@ -350,7 +360,7 @@ const Reports = () => {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <SummaryCard title="Receitas" value={formatCurrency(totals.income)} icon={TrendingUp} tone="success" />
             <SummaryCard title="Despesas" value={formatCurrency(totals.expense)} icon={TrendingDown} tone="danger" />
-            <SummaryCard title="Saldo" value={formatCurrency(totals.balance)} icon={Wallet} tone={totals.balance >= 0 ? "success" : "danger"} />
+            <SummaryCard title="Saldo em contas" value={formatCurrency(accountBalance)} icon={Wallet} tone={accountBalance >= 0 ? "success" : "danger"} />
             <SummaryCard title="Transações" value={String(totals.count)} icon={List} tone="primary" />
           </div>
         )}
