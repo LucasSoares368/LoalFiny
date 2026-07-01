@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Plus, CreditCard, TrendingDown, AlertTriangle, CheckCircle2, User, Building2, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, CreditCard, TrendingDown, CheckCircle2, Search, WalletCards, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 import { DebtFormDialog } from "@/components/debts/DebtFormDialog";
@@ -30,10 +29,65 @@ interface Debt {
   notes: string | null;
 }
 
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const normalizeDebt = (debt: any): Debt => ({
+  ...debt,
+  total_amount: toNumber(debt.total_amount),
+  current_balance: toNumber(debt.current_balance),
+  interest_rate: debt.interest_rate === null || debt.interest_rate === undefined ? null : toNumber(debt.interest_rate),
+  minimum_payment: debt.minimum_payment === null || debt.minimum_payment === undefined ? null : toNumber(debt.minimum_payment),
+  due_day: debt.due_day === null || debt.due_day === undefined ? null : Number(debt.due_day),
+});
+
+function DebtKpi({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tone = "primary",
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: typeof CreditCard;
+  tone?: "primary" | "success" | "danger";
+}) {
+  const toneClasses = {
+    primary: "bg-primary/10 text-primary",
+    success: "bg-emerald-500/15 text-emerald-600",
+    danger: "bg-red-500/15 text-red-500",
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-muted-foreground">{title}</p>
+          <p className={`text-3xl font-bold ${tone === "danger" ? "text-red-500" : tone === "success" ? "text-emerald-600" : "text-foreground"}`}>
+            {value}
+          </p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Debts = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [debts, setDebts] = useState<Debt[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
@@ -42,21 +96,15 @@ const Debts = () => {
   const { canUseBusinessProfile } = useUserPlan();
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) navigate("/auth");
+    };
+
     checkAuth();
-  }, []);
+  }, [navigate]);
 
-  useEffect(() => {
-    loadDebts();
-  }, [currentProfile]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
-  const loadDebts = async () => {
+  const loadDebts = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,26 +119,23 @@ const Debts = () => {
         .order("current_balance", { ascending: false });
 
       if (error) throw error;
-      setDebts(data || []);
+      setDebts((data || []).map(normalizeDebt));
     } catch (error: any) {
       toast.error("Erro ao carregar dívidas: " + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentProfile]);
 
-  const handleEdit = (debt: Debt) => {
-    setEditingDebt(debt);
-    setIsFormOpen(true);
-  };
+  useEffect(() => {
+    loadDebts();
+  }, [loadDebts]);
 
   const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("debts")
-        .delete()
-        .eq("id", id);
+    if (!window.confirm("Deseja remover esta dívida?")) return;
 
+    try {
+      const { error } = await supabase.from("debts").delete().eq("id", id);
       if (error) throw error;
       toast.success("Dívida removida!");
       loadDebts();
@@ -99,8 +144,30 @@ const Debts = () => {
     }
   };
 
-  const handlePayment = (debt: Debt) => {
-    setPaymentDebt(debt);
+  const filteredDebts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return debts;
+
+    return debts.filter((debt) =>
+      [debt.name, debt.creditor, debt.notes]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(query))
+    );
+  }, [debts, searchQuery]);
+
+  const activeDebts = filteredDebts.filter((debt) => debt.status === "active");
+  const paidDebts = filteredDebts.filter((debt) => debt.status === "paid");
+  const allActiveDebts = debts.filter((debt) => debt.status === "active");
+
+  const totalDebt = allActiveDebts.reduce((sum, debt) => sum + debt.current_balance, 0);
+  const originalTotal = debts.reduce((sum, debt) => sum + debt.total_amount, 0);
+  const totalPaid = debts.reduce((sum, debt) => sum + Math.max(debt.total_amount - debt.current_balance, 0), 0);
+  const minimumPayments = allActiveDebts.reduce((sum, debt) => sum + (debt.minimum_payment || 0), 0);
+  const averageProgress = originalTotal > 0 ? (totalPaid / originalTotal) * 100 : 0;
+
+  const openCreateDialog = () => {
+    setEditingDebt(null);
+    setIsFormOpen(true);
   };
 
   const handleFormClose = () => {
@@ -108,29 +175,10 @@ const Debts = () => {
     setEditingDebt(null);
   };
 
-  const handleFormSuccess = () => {
-    handleFormClose();
-    loadDebts();
-  };
-
-  const handlePaymentSuccess = () => {
-    setPaymentDebt(null);
-    loadDebts();
-  };
-
-  const activeDebts = debts.filter(d => d.status === "active");
-  const paidDebts = debts.filter(d => d.status === "paid");
-  
-  const totalDebt = activeDebts.reduce((sum, d) => sum + d.current_balance, 0);
-  const totalPaid = debts.reduce((sum, d) => sum + (d.total_amount - d.current_balance), 0);
-  const averageProgress = activeDebts.length > 0 
-    ? activeDebts.reduce((sum, d) => sum + ((d.total_amount - d.current_balance) / d.total_amount * 100), 0) / activeDebts.length 
-    : 0;
-
   return (
-    <AppLayout 
-      showProfileSwitcher 
-      currentProfile={currentProfile} 
+    <AppLayout
+      showProfileSwitcher
+      currentProfile={currentProfile}
       onProfileChange={(profile) => {
         if (profile === "business" && !canUseBusinessProfile()) {
           setShowUpgradeModal(true);
@@ -138,165 +186,130 @@ const Debts = () => {
         }
         setCurrentProfile(profile);
       }}
-      title="Gerenciar Dívidas"
+      title="Dívidas"
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <CreditCard className="h-6 w-6 text-primary" />
-              Gerenciar Dívidas
-            </h1>
-            <p className="text-muted-foreground">
-              Controle suas dívidas e acompanhe os pagamentos
-            </p>
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CreditCard className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-normal text-foreground">Dívidas</h1>
+              <p className="text-lg text-muted-foreground">Controle parcelas, saldos e pagamentos pendentes</p>
+            </div>
           </div>
-          <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button onClick={openCreateDialog} className="h-12 rounded-2xl px-8 text-base font-bold">
+            <Plus className="mr-2 h-5 w-5" />
             Nova Dívida
           </Button>
         </div>
 
-        {/* Profile Switcher */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={currentProfile === "personal" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setCurrentProfile("personal")}
-            className="gap-2"
-          >
-            <User className="h-4 w-4" />
-            Pessoal
-          </Button>
-          <Button
-            variant={currentProfile === "business" ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              if (!canUseBusinessProfile()) {
-                setShowUpgradeModal(true);
-                return;
-              }
-              setCurrentProfile("business");
-            }}
-            className="gap-2"
-          >
-            <Building2 className="h-4 w-4" />
-            Empresarial
-          </Button>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <DebtKpi
+            title="Saldo Devedor"
+            value={formatCurrency(totalDebt)}
+            description={`${allActiveDebts.length} dívida${allActiveDebts.length === 1 ? "" : "s"} ativa${allActiveDebts.length === 1 ? "" : "s"}`}
+            icon={CreditCard}
+            tone="danger"
+          />
+          <DebtKpi
+            title="Total Pago"
+            value={formatCurrency(totalPaid)}
+            description={`${averageProgress.toFixed(1)}% do valor original`}
+            icon={TrendingDown}
+            tone="success"
+          />
+          <DebtKpi
+            title="Pagamento Mínimo"
+            value={formatCurrency(minimumPayments)}
+            description="Compromisso mensal estimado"
+            icon={CalendarClock}
+            tone="primary"
+          />
+          <DebtKpi
+            title="Dívidas Quitadas"
+            value={String(debts.filter((debt) => debt.status === "paid").length)}
+            description="Registros finalizados"
+            icon={CheckCircle2}
+            tone="success"
+          />
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                Dívida Total Ativa
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-destructive">
-                R$ {totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {activeDebts.length} dívida{activeDebts.length !== 1 ? 's' : ''} ativa{activeDebts.length !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-success" />
-                Total Pago
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-success">
-                R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {paidDebts.length} dívida{paidDebts.length !== 1 ? 's' : ''} quitada{paidDebts.length !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Progresso Médio
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-primary">
-                {averageProgress.toFixed(1)}%
-              </p>
-              <Progress value={averageProgress} className="mt-2" />
-            </CardContent>
-          </Card>
+        <div className="relative max-w-xl">
+          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Buscar dívidas..."
+            className="h-14 rounded-2xl border-border/80 bg-card pl-14 text-base shadow-sm"
+          />
         </div>
 
-        {/* Debts List */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-44 rounded-2xl" />
+            ))}
           </div>
         ) : debts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <CreditCard className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma dívida cadastrada</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Comece adicionando suas dívidas para acompanhar os pagamentos
-              </p>
-              <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Adicionar Dívida
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/60 px-6 text-center">
+            <WalletCards className="mb-5 h-16 w-16 text-muted-foreground/60" />
+            <h2 className="text-2xl font-bold text-foreground">Nenhuma dívida cadastrada</h2>
+            <p className="mt-2 max-w-md text-lg text-muted-foreground">
+              Comece cadastrando financiamentos, empréstimos ou cartões para acompanhar o saldo devedor.
+            </p>
+            <Button onClick={openCreateDialog} className="mt-6 h-12 rounded-2xl px-8 text-base font-bold">
+              <Plus className="mr-2 h-5 w-5" />
+              Cadastrar Primeira Dívida
+            </Button>
+          </div>
+        ) : filteredDebts.length === 0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-border/80 bg-card px-6 text-center shadow-sm">
+            <Search className="mb-4 h-12 w-12 text-muted-foreground/60" />
+            <h2 className="text-xl font-bold text-foreground">Nenhuma dívida encontrada</h2>
+            <p className="mt-2 text-muted-foreground">Tente buscar por outro nome, credor ou observação.</p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-8">
             {activeDebts.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Dívidas Ativas ({activeDebts.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-foreground">Dívidas Ativas</h2>
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                   {activeDebts.map((debt) => (
                     <DebtCard
                       key={debt.id}
                       debt={debt}
-                      onEdit={handleEdit}
+                      onEdit={(selectedDebt) => {
+                        setEditingDebt(selectedDebt);
+                        setIsFormOpen(true);
+                      }}
                       onDelete={handleDelete}
-                      onPayment={handlePayment}
+                      onPayment={setPaymentDebt}
                     />
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
             {paidDebts.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                  Dívidas Quitadas ({paidDebts.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-foreground">Dívidas Quitadas</h2>
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                   {paidDebts.map((debt) => (
                     <DebtCard
                       key={debt.id}
                       debt={debt}
-                      onEdit={handleEdit}
+                      onEdit={(selectedDebt) => {
+                        setEditingDebt(selectedDebt);
+                        setIsFormOpen(true);
+                      }}
                       onDelete={handleDelete}
-                      onPayment={handlePayment}
+                      onPayment={setPaymentDebt}
                     />
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </div>
         )}
@@ -304,17 +317,27 @@ const Debts = () => {
 
       <DebtFormDialog
         open={isFormOpen}
-        onOpenChange={handleFormClose}
+        onOpenChange={(open) => {
+          if (!open) handleFormClose();
+          else setIsFormOpen(true);
+        }}
         debt={editingDebt}
         profileType={currentProfile}
-        onSuccess={handleFormSuccess}
+        onSuccess={() => {
+          handleFormClose();
+          loadDebts();
+        }}
       />
 
       <DebtPaymentDialog
         debt={paymentDebt}
         onClose={() => setPaymentDebt(null)}
-        onSuccess={handlePaymentSuccess}
+        onSuccess={() => {
+          setPaymentDebt(null);
+          loadDebts();
+        }}
       />
+
       <UpgradePrompt
         feature="Controle PF/PJ"
         description="O controle separado de perfil Pessoal e Empresarial está disponível no plano Pro Plus."

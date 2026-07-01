@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Loader2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,27 +22,33 @@ interface DebtPaymentDialogProps {
   onSuccess: () => void;
 }
 
+const formatCurrency = (value: number) =>
+  Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(0);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!debt || !amount) {
+  useEffect(() => {
+    if (!debt) return;
+    setAmount(Number(debt.minimum_payment || 0));
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setNotes("");
+  }, [debt]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!debt || amount <= 0) {
       toast.error("Informe o valor do pagamento");
       return;
     }
 
-    const paymentAmount = parseFloat(amount);
-    if (paymentAmount <= 0) {
-      toast.error("Valor deve ser maior que zero");
-      return;
-    }
+    const currentBalance = Number(debt.current_balance || 0);
 
-    if (paymentAmount > debt.current_balance) {
+    if (amount > currentBalance) {
       toast.error("Valor maior que o saldo devedor");
       return;
     }
@@ -51,21 +58,17 @@ export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialo
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      // Register payment
-      const { error: paymentError } = await supabase
-        .from("debt_payments")
-        .insert({
-          debt_id: debt.id,
-          user_id: user.id,
-          amount: paymentAmount,
-          payment_date: paymentDate,
-          notes: notes.trim() || null,
-        });
+      const { error: paymentError } = await supabase.from("debt_payments").insert({
+        debt_id: debt.id,
+        user_id: user.id,
+        amount,
+        payment_date: paymentDate,
+        notes: notes.trim() || null,
+      });
 
       if (paymentError) throw paymentError;
 
-      // Update debt balance
-      const newBalance = debt.current_balance - paymentAmount;
+      const newBalance = Math.max(currentBalance - amount, 0);
       const { error: debtError } = await supabase
         .from("debts")
         .update({
@@ -76,14 +79,7 @@ export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialo
 
       if (debtError) throw debtError;
 
-      if (newBalance <= 0) {
-        toast.success("🎉 Parabéns! Dívida quitada!");
-      } else {
-        toast.success("Pagamento registrado!");
-      }
-
-      setAmount("");
-      setNotes("");
+      toast.success(newBalance <= 0 ? "Dívida quitada!" : "Pagamento registrado!");
       onSuccess();
     } catch (error: any) {
       toast.error("Erro ao registrar pagamento: " + error.message);
@@ -92,61 +88,45 @@ export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialo
     }
   };
 
-  const setQuickAmount = (value: number) => {
-    setAmount(value.toString());
-  };
-
   if (!debt) return null;
 
+  const currentBalance = Number(debt.current_balance || 0);
+  const minimumPayment = Number(debt.minimum_payment || 0);
+
   return (
-    <Dialog open={!!debt} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md">
+    <Dialog open={!!debt} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
             Registrar Pagamento
           </DialogTitle>
           <DialogDescription>
-            {debt.name} - Saldo: R$ {debt.current_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {debt.name} - saldo devedor {formatCurrency(currentBalance)}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="payment_amount">Valor do Pagamento *</Label>
-            <Input
+            <CurrencyInput
               id="payment_amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              max={debt.current_balance}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               placeholder="0,00"
               required
               autoFocus
             />
           </div>
 
-          {/* Quick Amount Buttons */}
           <div className="flex flex-wrap gap-2">
-            {debt.minimum_payment && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickAmount(debt.minimum_payment!)}
-              >
-                Mínimo: R$ {debt.minimum_payment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {minimumPayment > 0 && (
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => setAmount(minimumPayment)}>
+                Mínimo: {formatCurrency(minimumPayment)}
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickAmount(debt.current_balance)}
-            >
-              Quitar: R$ {debt.current_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => setAmount(currentBalance)}>
+              Quitar: {formatCurrency(currentBalance)}
             </Button>
           </div>
 
@@ -156,7 +136,7 @@ export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialo
               id="payment_date"
               type="date"
               value={paymentDate}
-              onChange={(e) => setPaymentDate(e.target.value)}
+              onChange={(event) => setPaymentDate(event.target.value)}
             />
           </div>
 
@@ -165,30 +145,24 @@ export function DebtPaymentDialog({ debt, onClose, onSuccess }: DebtPaymentDialo
             <Textarea
               id="payment_notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(event) => setNotes(event.target.value)}
               placeholder="Ex: Parcela 5 de 12..."
-              rows={2}
+              rows={3}
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-              disabled={loading}
-            >
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} className="h-11 flex-1 rounded-2xl" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="submit" className="h-11 flex-1 rounded-2xl font-semibold" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processando...
                 </>
               ) : (
-                "Confirmar Pagamento"
+                "Confirmar"
               )}
             </Button>
           </div>

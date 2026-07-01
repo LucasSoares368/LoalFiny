@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,60 +32,59 @@ interface DebtFormDialogProps {
   onSuccess: () => void;
 }
 
+const emptyForm = () => ({
+  name: "",
+  creditor: "",
+  total_amount: 0,
+  current_balance: 0,
+  interest_rate: "",
+  minimum_payment: 0,
+  due_day: "",
+  start_date: new Date().toISOString().split("T")[0],
+  notes: "",
+});
+
 export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSuccess }: DebtFormDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    creditor: "",
-    total_amount: "",
-    current_balance: "",
-    interest_rate: "",
-    minimum_payment: "",
-    due_day: "",
-    start_date: "",
-    notes: "",
-  });
+  const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
+    if (!open) return;
+
     if (debt) {
       setFormData({
         name: debt.name,
         creditor: debt.creditor || "",
-        total_amount: debt.total_amount.toString(),
-        current_balance: debt.current_balance.toString(),
+        total_amount: Number(debt.total_amount || 0),
+        current_balance: Number(debt.current_balance || 0),
         interest_rate: debt.interest_rate?.toString() || "",
-        minimum_payment: debt.minimum_payment?.toString() || "",
+        minimum_payment: Number(debt.minimum_payment || 0),
         due_day: debt.due_day?.toString() || "",
         start_date: debt.start_date || "",
         notes: debt.notes || "",
       });
-    } else {
-      setFormData({
-        name: "",
-        creditor: "",
-        total_amount: "",
-        current_balance: "",
-        interest_rate: "",
-        minimum_payment: "",
-        due_day: "",
-        start_date: new Date().toISOString().split("T")[0],
-        notes: "",
-      });
-    }
-  }, [debt, open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim() || !formData.total_amount) {
-      toast.error("Preencha nome e valor total");
       return;
     }
 
-    const totalAmount = parseFloat(formData.total_amount);
-    let currentBalance = formData.current_balance ? parseFloat(formData.current_balance) : totalAmount;
+    setFormData(emptyForm());
+  }, [debt, open]);
 
-    if (currentBalance > totalAmount) {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast.error("Informe o nome da dívida");
+      return;
+    }
+
+    if (formData.total_amount <= 0) {
+      toast.error("Informe um valor total maior que zero");
+      return;
+    }
+
+    const currentBalance = formData.current_balance > 0 ? formData.current_balance : formData.total_amount;
+
+    if (currentBalance > formData.total_amount) {
       toast.error("Saldo devedor não pode ser maior que o valor total");
       return;
     }
@@ -97,11 +97,11 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
       const debtData = {
         name: formData.name.trim(),
         creditor: formData.creditor.trim() || null,
-        total_amount: totalAmount,
+        total_amount: formData.total_amount,
         current_balance: currentBalance,
-        interest_rate: formData.interest_rate ? parseFloat(formData.interest_rate) : null,
-        minimum_payment: formData.minimum_payment ? parseFloat(formData.minimum_payment) : null,
-        due_day: formData.due_day ? parseInt(formData.due_day) : null,
+        interest_rate: formData.interest_rate ? Number(formData.interest_rate) : null,
+        minimum_payment: formData.minimum_payment > 0 ? formData.minimum_payment : null,
+        due_day: formData.due_day ? Number(formData.due_day) : null,
         start_date: formData.start_date || null,
         notes: formData.notes.trim() || null,
         status: currentBalance <= 0 ? "paid" : "active",
@@ -110,18 +110,11 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
       };
 
       if (debt) {
-        const { error } = await supabase
-          .from("debts")
-          .update(debtData)
-          .eq("id", debt.id);
-
+        const { error } = await supabase.from("debts").update(debtData).eq("id", debt.id);
         if (error) throw error;
         toast.success("Dívida atualizada!");
       } else {
-        const { error } = await supabase
-          .from("debts")
-          .insert(debtData);
-
+        const { error } = await supabase.from("debts").insert(debtData);
         if (error) throw error;
         toast.success("Dívida cadastrada!");
       }
@@ -136,46 +129,45 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>{debt ? "Editar Dívida" : "Nova Dívida"}</DialogTitle>
           <DialogDescription>
-            {debt ? "Atualize as informações da dívida" : "Cadastre uma nova dívida para acompanhar"}
+            {debt ? "Atualize os dados da dívida." : "Cadastre uma dívida para acompanhar saldo, vencimento e pagamentos."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome da Dívida *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ex: Cartão de Crédito, Empréstimo..."
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Dívida *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                placeholder="Ex: Empréstimo, cartão, financiamento..."
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="creditor">Credor</Label>
+              <Input
+                id="creditor"
+                value={formData.creditor}
+                onChange={(event) => setFormData({ ...formData, creditor: event.target.value })}
+                placeholder="Ex: Banco, financeira, pessoa..."
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="creditor">Credor</Label>
-            <Input
-              id="creditor"
-              value={formData.creditor}
-              onChange={(e) => setFormData({ ...formData, creditor: e.target.value })}
-              placeholder="Ex: Banco XYZ, Financeira..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="total_amount">Valor Total *</Label>
-              <Input
+              <CurrencyInput
                 id="total_amount"
-                type="number"
-                step="0.01"
-                min="0"
                 value={formData.total_amount}
-                onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, total_amount: value })}
                 placeholder="0,00"
                 required
               />
@@ -183,19 +175,16 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
 
             <div className="space-y-2">
               <Label htmlFor="current_balance">Saldo Devedor</Label>
-              <Input
+              <CurrencyInput
                 id="current_balance"
-                type="number"
-                step="0.01"
-                min="0"
                 value={formData.current_balance}
-                onChange={(e) => setFormData({ ...formData, current_balance: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, current_balance: value })}
                 placeholder="Igual ao total"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="interest_rate">Juros (% a.m.)</Label>
               <Input
@@ -204,26 +193,21 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
                 step="0.01"
                 min="0"
                 value={formData.interest_rate}
-                onChange={(e) => setFormData({ ...formData, interest_rate: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, interest_rate: event.target.value })}
                 placeholder="0,00"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="minimum_payment">Pagamento Mínimo</Label>
-              <Input
+              <CurrencyInput
                 id="minimum_payment"
-                type="number"
-                step="0.01"
-                min="0"
                 value={formData.minimum_payment}
-                onChange={(e) => setFormData({ ...formData, minimum_payment: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, minimum_payment: value })}
                 placeholder="0,00"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="due_day">Dia do Vencimento</Label>
               <Input
@@ -232,20 +216,20 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
                 min="1"
                 max="31"
                 value={formData.due_day}
-                onChange={(e) => setFormData({ ...formData, due_day: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, due_day: event.target.value })}
                 placeholder="1-31"
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="start_date">Data de Início</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="start_date">Data de Início</Label>
+            <Input
+              id="start_date"
+              type="date"
+              value={formData.start_date}
+              onChange={(event) => setFormData({ ...formData, start_date: event.target.value })}
+            />
           </div>
 
           <div className="space-y-2">
@@ -253,26 +237,20 @@ export function DebtFormDialog({ open, onOpenChange, debt, profileType, onSucces
             <Textarea
               id="notes"
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Anotações adicionais..."
-              rows={2}
+              onChange={(event) => setFormData({ ...formData, notes: event.target.value })}
+              placeholder="Anotações sobre esta dívida..."
+              rows={3}
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-              disabled={loading}
-            >
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-11 flex-1 rounded-2xl" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="submit" className="h-11 flex-1 rounded-2xl font-semibold" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Salvando...
                 </>
               ) : debt ? (
