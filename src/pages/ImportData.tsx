@@ -872,28 +872,40 @@ const ImportData = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <header className="bg-card/50 backdrop-blur-sm border-b border-border sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Database className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Importar Dados</span>
+    <AppLayout title="Importar Dados">
+      <main className="mx-auto w-full max-w-5xl space-y-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Database className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
+                Importar Dados
+              </h1>
+              <p className="mt-1 max-w-2xl text-lg text-muted-foreground">
+                Traga planilhas, PDFs e prints de extrato para acelerar seus lançamentos.
+              </p>
+            </div>
           </div>
-        </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+          <Button
+            variant="outline"
+            className="h-12 rounded-2xl px-5 font-semibold"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="mb-6">
+          <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <FileSpreadsheet className="h-8 w-8 text-primary" />
               </div>
               <CardTitle className="text-2xl">Importar Dados Financeiros</CardTitle>
@@ -906,7 +918,7 @@ const ImportData = () => {
               {!completed && (
                 <div className="space-y-4">
                   <div
-                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                    className="cursor-pointer rounded-2xl border-2 border-dashed border-border bg-muted/20 p-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -917,35 +929,35 @@ const ImportData = () => {
                       className="hidden"
                       multiple
                     />
-                    <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg font-medium mb-2">
+                    <Upload className="mx-auto mb-4 h-10 w-10 text-primary" />
+                    <p className="mb-2 text-lg font-bold">
                       {selectedFiles.length > 0 ? "Adicionar mais arquivos" : "Clique para selecionar arquivos"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Formatos suportados: Excel, CSV, PDF, Imagens (PNG, JPG)
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      📸 Prints de extrato bancário são analisados por IA • Múltiplos arquivos suportados
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Prints de extrato bancário são analisados por IA. Múltiplos arquivos suportados.
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">ou</span>
-                    <div className="flex-1 h-px bg-border" />
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ou</span>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
 
                   <Button 
                     variant="outline" 
-                    className="w-full py-8 border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                    className="group h-auto w-full rounded-2xl border-2 border-dashed py-8 transition-all hover:border-primary/50 hover:bg-primary/5"
                     onClick={() => startCamera()}
                   >
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-2 text-primary">
-                        <Camera className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                        <Camera className="h-5 w-5 transition-transform group-hover:scale-110" />
                         <span className="font-bold">Ativar Câmera</span>
                       </div>
-                      <span className="text-xs text-muted-foreground font-normal">Tire uma foto do seu comprovante ou extrato</span>
+                      <span className="text-xs font-normal text-muted-foreground">Tire uma foto do seu comprovante ou extrato</span>
                     </div>
                   </Button>
                 </div>
@@ -962,10 +974,10 @@ const ImportData = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFile()}
-                      className="text-danger hover:text-danger text-xs"
+                      className="rounded-xl text-xs text-danger hover:text-danger"
                       disabled={parsing || importing}
                     >
-                      <X className="h-3 w-3 mr-1" />
+                      <X className="mr-1 h-3 w-3" />
                       Limpar todos
                     </Button>
                   </div>
@@ -976,7 +988,7 @@ const ImportData = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                        className={`flex items-center justify-between rounded-2xl border p-4 ${
                           processedFile.status === 'error' 
                             ? 'bg-danger/10 border-danger/30' 
                             : processedFile.status === 'done'
@@ -1001,7 +1013,7 @@ const ImportData = () => {
                             <FileSpreadsheet className="h-5 w-5 text-success" />
                           )}
                           <div>
-                            <p className="font-medium text-sm truncate max-w-[180px]">
+                            <p className="max-w-[220px] truncate text-sm font-semibold sm:max-w-[520px]">
                               {processedFile.file.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
@@ -1017,7 +1029,7 @@ const ImportData = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => removeFile(index)}
-                          className="h-7 w-7 text-muted-foreground hover:text-danger"
+                          className="h-8 w-8 rounded-full text-muted-foreground hover:text-danger"
                           disabled={parsing || importing || processedFile.status === 'processing'}
                         >
                           <X className="h-4 w-4" />
@@ -1033,7 +1045,7 @@ const ImportData = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-3 py-4"
+                  className="flex items-center justify-center gap-3 rounded-2xl bg-muted/40 py-5"
                 >
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   <span>Analisando arquivos... ({selectedFiles.filter(f => f.status === 'done').length}/{selectedFiles.length})</span>
@@ -1042,7 +1054,7 @@ const ImportData = () => {
 
               {/* Parse error */}
               {parseError && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="rounded-2xl">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{parseError}</AlertDescription>
                 </Alert>
@@ -1060,15 +1072,15 @@ const ImportData = () => {
                     Dados encontrados no arquivo
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                    <div className="rounded-2xl bg-muted/50 p-4">
                       <p className="text-muted-foreground">Total de Receitas</p>
                       <p className="text-2xl font-bold text-success">
                         R$ {parsedData.incomes.reduce((s, i) => s + i.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-muted-foreground">{parsedData.incomes.length} transações</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="rounded-2xl bg-muted/50 p-4">
                       <p className="text-muted-foreground">Total de Despesas</p>
                       <p className="text-2xl font-bold text-danger">
                         R$ {parsedData.expenses.reduce((s, e) => s + e.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1076,7 +1088,7 @@ const ImportData = () => {
                       <p className="text-xs text-muted-foreground">{parsedData.expenses.length} transações</p>
                     </div>
                     {parsedData.fixedCosts.length > 0 && (
-                      <div className="p-4 rounded-lg bg-muted/50">
+                      <div className="rounded-2xl bg-muted/50 p-4">
                         <p className="text-muted-foreground">Custos Fixos</p>
                         <p className="text-2xl font-bold">
                           R$ {parsedData.fixedCosts.reduce((s, c) => s + c.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1084,15 +1096,15 @@ const ImportData = () => {
                         <p className="text-xs text-muted-foreground">{parsedData.fixedCosts.length} contas</p>
                       </div>
                     )}
-                    <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="rounded-2xl bg-muted/50 p-4">
                       <p className="text-muted-foreground">Categorias</p>
                       <p className="text-2xl font-bold">{parsedData.categories.length}</p>
                       <p className="text-xs text-muted-foreground">serão criadas</p>
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground text-center">
-                    ⚠️ O arquivo não será armazenado, apenas os dados extraídos serão salvos.
+                  <p className="text-center text-xs text-muted-foreground">
+                    O arquivo não será armazenado, apenas os dados extraídos serão salvos.
                   </p>
                 </motion.div>
               )}
@@ -1104,7 +1116,7 @@ const ImportData = () => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="space-y-3"
+                    className="space-y-3 rounded-2xl bg-muted/40 p-4"
                   >
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1122,17 +1134,17 @@ const ImportData = () => {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 rounded-lg bg-success/10 border border-success/20"
+                    className="rounded-2xl border border-success/20 bg-success/10 p-4"
                   >
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="mb-4 flex items-center gap-3">
                       <CheckCircle2 className="h-6 w-6 text-success" />
-                      <span className="font-semibold text-success">Importação Concluída!</span>
+                      <span className="font-semibold text-success">Importação concluída!</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>✅ {stats.categories} categorias criadas</div>
-                      <div>✅ {stats.fixedCosts} custos fixos</div>
-                      <div>✅ {stats.incomes} receitas</div>
-                      <div>✅ {stats.expenses} despesas</div>
+                      <div>{stats.categories} categorias criadas</div>
+                      <div>{stats.fixedCosts} custos fixos</div>
+                      <div>{stats.incomes} receitas</div>
+                      <div>{stats.expenses} despesas</div>
                     </div>
                   </motion.div>
                 )}
@@ -1140,10 +1152,10 @@ const ImportData = () => {
 
               {/* Actions */}
               {parsedData && !completed && (
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="h-12 flex-1 rounded-2xl font-semibold"
                     onClick={() => removeFile()}
                     disabled={importing}
                   >
@@ -1151,7 +1163,7 @@ const ImportData = () => {
                     Cancelar
                   </Button>
                   <Button
-                    className="flex-1 bg-gradient-to-r from-primary to-primary-glow"
+                    className="h-12 flex-1 rounded-2xl font-bold"
                     onClick={importData}
                     disabled={importing}
                   >
@@ -1171,17 +1183,17 @@ const ImportData = () => {
               )}
 
               {completed && (
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="h-12 flex-1 rounded-2xl font-semibold"
                     onClick={() => removeFile()}
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Importar Outro Arquivo
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="h-12 flex-1 rounded-2xl font-bold"
                     onClick={() => navigate("/dashboard")}
                   >
                     <CheckCircle2 className="mr-2 h-5 w-5" />
@@ -1195,37 +1207,37 @@ const ImportData = () => {
       </main>
 
       <Dialog open={isCameraOpen} onOpenChange={(open) => !open && stopCamera()}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-black border-none">
-          <DialogHeader className="p-4 absolute top-0 left-0 right-0 z-10 bg-black/50 backdrop-blur-sm">
-            <DialogTitle className="text-white flex items-center gap-2">
+        <DialogContent className="overflow-hidden rounded-2xl border-none bg-black p-0 sm:max-w-md">
+          <DialogHeader className="absolute left-0 right-0 top-0 z-10 bg-black/50 p-4 backdrop-blur-sm">
+            <DialogTitle className="flex items-center gap-2 text-white">
               <Camera className="h-5 w-5" />
               Capturar Extrato
             </DialogTitle>
           </DialogHeader>
           
-          <div className="relative aspect-[3/4] bg-black flex items-center justify-center">
+          <div className="relative flex aspect-[3/4] items-center justify-center bg-black">
             <video 
               ref={videoRef} 
               autoPlay 
               playsInline 
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
             <canvas ref={canvasRef} className="hidden" />
             
-            <div className="absolute inset-8 border-2 border-white/30 rounded-lg pointer-events-none">
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-white" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white" />
+            <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/30">
+              <div className="absolute left-0 top-0 h-4 w-4 border-l-2 border-t-2 border-white" />
+              <div className="absolute right-0 top-0 h-4 w-4 border-r-2 border-t-2 border-white" />
+              <div className="absolute bottom-0 left-0 h-4 w-4 border-b-2 border-l-2 border-white" />
+              <div className="absolute bottom-0 right-0 h-4 w-4 border-b-2 border-r-2 border-white" />
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-black absolute bottom-0 left-0 right-0 flex justify-center items-center gap-8 border-none">
+          <DialogFooter className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-8 border-none bg-black p-6">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={stopCamera}
-              className="text-white hover:bg-white/20 h-12 w-12 rounded-full"
+              className="h-12 w-12 rounded-full text-white hover:bg-white/20"
             >
               <X className="h-6 w-6" />
             </Button>
@@ -1233,7 +1245,7 @@ const ImportData = () => {
             <Button 
               size="icon" 
               onClick={capturePhoto}
-              className="h-16 w-16 rounded-full bg-white hover:bg-white/90 text-black border-4 border-white/30"
+              className="h-16 w-16 rounded-full border-4 border-white/30 bg-white text-black hover:bg-white/90"
             >
               <div className="h-10 w-10 rounded-full border-2 border-black" />
             </Button>
@@ -1242,14 +1254,14 @@ const ImportData = () => {
               variant="ghost" 
               size="icon" 
               onClick={toggleCamera}
-              className="text-white hover:bg-white/20 h-12 w-12 rounded-full"
+              className="h-12 w-12 rounded-full text-white hover:bg-white/20"
             >
               <RefreshCw className="h-6 w-6" />
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 };
 
