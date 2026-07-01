@@ -18,13 +18,13 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
     
-    /* Primary - Vibrant Finance Green */
-    --primary: 162 94% 30%;
+    /* Primary - LocalFiny Orange (#FF6A00) */
+    --primary: 25 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 162 100% 40%;
+    --primary-glow: 25 100% 60%;
     
-    /* Secondary - Sophisticated Slate */
-    --secondary: 215 25% 27%;
+    /* Secondary - LocalFiny Navy (#0D1B2A) */
+    --secondary: 211 53% 11%;
     --secondary-foreground: 210 40% 98%;
     
     /* Status colors - Refined accessibility */
@@ -43,33 +43,33 @@ All colors MUST be HSL.
     /* UI elements - Better contrast */
     --muted: 220 14% 94%;
     --muted-foreground: 220 9% 46%;
-    --accent: 162 94% 30% / 0.05;
-    --accent-foreground: 162 94% 30%;
+    --accent: 25 100% 50% / 0.06;
+    --accent-foreground: 25 100% 50%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
     
     /* Borders and inputs - Cleaner look */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 162 94% 30%;
+    --ring: 25 100% 50%;
     --radius: 1rem;
     
     /* Charts */
-    --chart-1: 162 94% 30%;
+    --chart-1: 25 100% 50%;
     --chart-2: 158 82% 40%;
-    --chart-3: 199 89% 48%;
+    --chart-3: 211 53% 11%;
     --chart-4: 38 92% 50%;
     --chart-5: 0 84% 60%;
 
     /* Sidebar */
     --sidebar-background: 220 33% 97%;
     --sidebar-foreground: 224 71% 4%;
-    --sidebar-primary: 162 94% 30%;
+    --sidebar-primary: 25 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 162 94% 30% / 0.05;
-    --sidebar-accent-foreground: 162 94% 30%;
+    --sidebar-accent: 25 100% 50% / 0.06;
+    --sidebar-accent-foreground: 25 100% 50%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 162 94% 30%;
+    --sidebar-ring: 25 100% 50%;
   }
 
   .dark {
@@ -83,13 +83,13 @@ All colors MUST be HSL.
     --popover: 222 47% 7%;
     --popover-foreground: 213 31% 91%;
     
-    /* Primary - Vibrant Finance Green */
-    --primary: 162 94% 35%;
+    /* Primary - LocalFiny Orange (#FF6A00) */
+    --primary: 25 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 162 100% 45%;
+    --primary-glow: 25 100% 60%;
     
-    /* Secondary - Sophisticated Slate */
-    --secondary: 217 33% 17%;
+    /* Secondary - LocalFiny Navy (#0D1B2A) */
+    --secondary: 211 53% 11%;
     --secondary-foreground: 210 40% 98%;
     
     /* Status colors */
@@ -108,32 +108,32 @@ All colors MUST be HSL.
     /* UI elements */
     --muted: 223 47% 11%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 162 94% 35% / 0.15;
-    --accent-foreground: 162 94% 35%;
+    --accent: 25 100% 50% / 0.15;
+    --accent-foreground: 25 100% 60%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     
     /* Borders and inputs */
     --border: 223 47% 11%;
     --input: 223 47% 11%;
-    --ring: 162 94% 35%;
+    --ring: 25 100% 50%;
     
     /* Charts */
-    --chart-1: 162 94% 35%;
+    --chart-1: 25 100% 50%;
     --chart-2: 158 82% 45%;
-    --chart-3: 217 91% 60%;
+    --chart-3: 211 53% 60%;
     --chart-4: 48 96% 53%;
     --chart-5: 0 84% 65%;
 
     /* Sidebar */
     --sidebar-background: 222 47% 3%;
     --sidebar-foreground: 213 31% 91%;
-    --sidebar-primary: 162 94% 35%;
+    --sidebar-primary: 25 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 162 94% 35% / 0.15;
-    --sidebar-accent-foreground: 162 94% 35%;
+    --sidebar-accent: 25 100% 50% / 0.15;
+    --sidebar-accent-foreground: 25 100% 60%;
     --sidebar-border: 223 47% 11%;
-    --sidebar-ring: 162 94% 35%;
+    --sidebar-ring: 25 100% 50%;
   }
 }
 
