@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Edit2, Check, X, Receipt, Loader2, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 
 interface Category {
   id: string;
   name: string;
   icon: string | null;
+  profile_type?: FinancialProfile | null;
 }
 
 interface FixedCost {
@@ -27,9 +29,10 @@ interface FixedCostsManagerProps {
   costs: FixedCost[];
   onUpdate: () => void;
   loading: boolean;
+  currentProfile: FinancialProfile;
 }
 
-export function FixedCostsManager({ costs, onUpdate, loading }: FixedCostsManagerProps) {
+export function FixedCostsManager({ costs, onUpdate, loading, currentProfile }: FixedCostsManagerProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,7 +42,7 @@ export function FixedCostsManager({ costs, onUpdate, loading }: FixedCostsManage
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [currentProfile]);
 
   const loadCategories = async () => {
     try {
@@ -48,12 +51,12 @@ export function FixedCostsManager({ costs, onUpdate, loading }: FixedCostsManage
 
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, icon")
-        .or(`user_id.eq.${user.id},is_default.eq.true`)
+        .select("id, name, icon, profile_type")
+        .eq("user_id", user.id)
         .order("name");
 
       if (error) throw error;
-      setCategories(data || []);
+      setCategories(((data || []) as Category[]).filter((category) => !category.profile_type || category.profile_type === currentProfile));
     } catch (error) {
       console.error("Error loading categories:", error);
     }
@@ -74,6 +77,7 @@ export function FixedCostsManager({ costs, onUpdate, loading }: FixedCostsManage
         .from("fixed_costs")
         .insert({
           user_id: user.id,
+          profile_type: currentProfile,
           name: newCost.name.trim(),
           amount: parseFloat(newCost.amount),
           is_variable: newCost.is_variable,

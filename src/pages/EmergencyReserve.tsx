@@ -22,14 +22,19 @@ import {
   Shield,
   Target,
   TrendingUp,
+  User,
   Wallet,
   X,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 import { FixedCostsManager } from "@/components/emergency/FixedCostsManager";
 import { VariableCostAnalytics } from "@/components/emergency/VariableCostAnalytics";
+import { useUserPlan } from "@/hooks/useUserPlan";
+import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
 
 interface EmergencyGoal {
   id: string;
@@ -108,6 +113,8 @@ function ReserveKpi({
 
 const EmergencyReserve = () => {
   const navigate = useNavigate();
+  const { canUseBusinessProfile } = useUserPlan();
+  const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const [loading, setLoading] = useState(true);
   const [costsLoading, setCostsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -116,6 +123,7 @@ const EmergencyReserve = () => {
   const [emergencyGoal, setEmergencyGoal] = useState<EmergencyGoal | null>(null);
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [customAmount, setCustomAmount] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [formData, setFormData] = useState({
     goal_type: "months" as "months" | "amount" | "both",
     target_months: 6,
@@ -123,10 +131,11 @@ const EmergencyReserve = () => {
   });
 
   const activeGoal = emergencyGoal ?? defaultGoal;
+  const isPersonal = currentProfile === "personal";
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentProfile]);
 
   const loadData = async () => {
     try {
@@ -141,8 +150,18 @@ const EmergencyReserve = () => {
       }
 
       const [{ data: goalData, error: goalError }, costsResult] = await Promise.all([
-        supabase.from("emergency_goals").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("fixed_costs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase
+          .from("emergency_goals")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("profile_type", currentProfile)
+          .maybeSingle(),
+        supabase
+          .from("fixed_costs")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("profile_type", currentProfile)
+          .order("created_at", { ascending: true }),
       ]);
 
       if (goalError) throw goalError;
@@ -186,6 +205,7 @@ const EmergencyReserve = () => {
         .from("fixed_costs")
         .select("*")
         .eq("user_id", user.id)
+        .eq("profile_type", currentProfile)
         .order("created_at", { ascending: true });
       if (error) throw error;
       setFixedCosts((data || []).map((cost: any) => ({ ...cost, amount: toNumber(cost.amount) })));
@@ -235,6 +255,7 @@ const EmergencyReserve = () => {
         goal_type: validatedData.goal_type,
         target_months: validatedData.target_months,
         target_amount: validatedData.target_amount || 0,
+        profile_type: currentProfile,
       };
 
       if (emergencyGoal?.id) {
@@ -243,6 +264,7 @@ const EmergencyReserve = () => {
       } else {
         const { error } = await supabase.from("emergency_goals").insert({
           user_id: user.id,
+          profile_type: currentProfile,
           current_amount: 0,
           ...payload,
         });
@@ -270,6 +292,7 @@ const EmergencyReserve = () => {
       .from("emergency_goals")
       .insert({
         user_id: userId,
+        profile_type: currentProfile,
         current_amount: 0,
         goal_type: activeGoal.goal_type,
         target_months: activeGoal.target_months,
@@ -326,9 +349,25 @@ const EmergencyReserve = () => {
     }
   };
 
+  const handleProfileChange = (profile: FinancialProfile) => {
+    if (profile === "business" && !canUseBusinessProfile()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setCurrentProfile(profile);
+    setIsEditing(false);
+    setCustomAmount("");
+  };
+
   if (loading) {
     return (
-      <AppLayout title="Reserva de Emergência">
+      <AppLayout
+        title="Reserva de Emergência"
+        showProfileSwitcher
+        currentProfile={currentProfile}
+        onProfileChange={handleProfileChange}
+      >
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-14 w-14 rounded-full" />
@@ -349,16 +388,23 @@ const EmergencyReserve = () => {
   }
 
   return (
-    <AppLayout title="Reserva de Emergência">
+    <AppLayout
+      title="Reserva de Emergência"
+      showProfileSwitcher
+      currentProfile={currentProfile}
+      onProfileChange={handleProfileChange}
+    >
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Shield className="h-7 w-7" />
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${isPersonal ? "bg-primary/10 text-primary" : "bg-secondary/10 text-secondary"}`}>
+              {isPersonal ? <User className="h-7 w-7" /> : <Building2 className="h-7 w-7" />}
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-normal text-foreground">Reserva de Emergência</h1>
-              <p className="text-lg text-muted-foreground">Monte uma proteção financeira para imprevistos.</p>
+              <p className="text-lg text-muted-foreground">
+                Monte uma proteção financeira {isPersonal ? "pessoal" : "empresarial"} para imprevistos.
+              </p>
             </div>
           </div>
           <Button onClick={() => setIsEditing(true)} className="h-12 rounded-2xl px-8 text-base font-bold">
@@ -663,13 +709,28 @@ const EmergencyReserve = () => {
           </div>
         )}
 
-        <FixedCostsManager costs={fixedCosts} onUpdate={handleRefreshCosts} loading={costsLoading} />
+        <FixedCostsManager
+          costs={fixedCosts}
+          onUpdate={handleRefreshCosts}
+          loading={costsLoading}
+          currentProfile={currentProfile}
+        />
 
         <VariableCostAnalytics
           variableCosts={fixedCosts.filter((cost) => cost.is_variable)}
           onUpdateCostAmount={handleUpdateCostAmount}
+          currentProfile={currentProfile}
         />
       </div>
+      <UpgradePrompt
+        feature="Controle PF/PJ"
+        description="A reserva separada por perfil Pessoal e Empresarial está disponível no plano Pro Plus."
+        variant="modal"
+        requiredPlan="pro_plus"
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        benefits={["Reserva por perfil", "Custos fixos separados", "Dashboard consolidado", "Relatórios segmentados"]}
+      />
     </AppLayout>
   );
 };

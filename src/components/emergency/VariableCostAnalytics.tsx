@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 import {
   Collapsible,
   CollapsibleContent,
@@ -52,9 +53,10 @@ interface CostAnalytics {
 interface VariableCostAnalyticsProps {
   variableCosts: FixedCost[];
   onUpdateCostAmount: (costId: string, newAmount: number) => void;
+  currentProfile: FinancialProfile;
 }
 
-export function VariableCostAnalytics({ variableCosts, onUpdateCostAmount }: VariableCostAnalyticsProps) {
+export function VariableCostAnalytics({ variableCosts, onUpdateCostAmount, currentProfile }: VariableCostAnalyticsProps) {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<CostAnalytics[]>([]);
   const [expandedCosts, setExpandedCosts] = useState<Set<string>>(new Set());
@@ -67,7 +69,7 @@ export function VariableCostAnalytics({ variableCosts, onUpdateCostAmount }: Var
       setLoading(false);
       setAnalytics([]);
     }
-  }, [variableCosts]);
+  }, [variableCosts, currentProfile]);
 
   const loadAnalytics = async () => {
     try {
@@ -94,6 +96,7 @@ export function VariableCostAnalytics({ variableCosts, onUpdateCostAmount }: Var
             .select("amount, date, description, category_id")
             .eq("user_id", user.id)
             .eq("type", "expense")
+            .eq("profile_type", currentProfile)
             .gte("date", monthStart)
             .lte("date", monthEnd);
 

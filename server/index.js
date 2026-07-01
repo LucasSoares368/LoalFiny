@@ -96,6 +96,8 @@ async function runMigrations() {
   await ensureColumn("custom_goals", "goal_mode", "varchar(20) not null default 'expense' after profile_type");
   await ensureColumn("custom_goals", "destination_bank_id", "char(36) null after goal_mode");
   await ensureColumn("custom_goals", "debt_id", "char(36) null after destination_bank_id");
+  await ensureColumn("emergency_goals", "profile_type", "varchar(20) not null default 'personal' after user_id");
+  await ensureColumn("fixed_costs", "profile_type", "varchar(20) not null default 'personal' after user_id");
 }
 
 const marketQuoteSymbols = [

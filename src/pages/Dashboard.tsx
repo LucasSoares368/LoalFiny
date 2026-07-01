@@ -102,7 +102,7 @@ const Dashboard = () => {
       }
 
       setUser(session.user);
-      await loadAdditionalData(session.user.id);
+      await loadAdditionalData(session.user.id, currentProfile);
     } catch (error: any) {
       toast.error("Erro ao carregar dados");
       console.error(error);
@@ -111,20 +111,28 @@ const Dashboard = () => {
     }
   };
 
-  const loadAdditionalData = async (userId: string) => {
+  useEffect(() => {
+    if (user?.id) {
+      loadAdditionalData(user.id, currentProfile);
+    }
+  }, [user?.id, currentProfile]);
+
+  const loadAdditionalData = async (userId: string, profileType = currentProfile) => {
     try {
       // Load emergency goal
       const { data: emergencyGoal } = await supabase
         .from("emergency_goals")
         .select("*")
         .eq("user_id", userId)
+        .eq("profile_type", profileType)
         .maybeSingle();
 
       // Load fixed costs
       const { data: fixedCosts } = await supabase
         .from("fixed_costs")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("profile_type", profileType);
 
       const monthlyFixedCosts = fixedCosts?.reduce((sum, c) => sum + parseFloat(c.amount.toString()), 0) || 0;
       

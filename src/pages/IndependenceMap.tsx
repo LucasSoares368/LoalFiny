@@ -26,9 +26,12 @@ import {
   Wallet,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-financial-journey.jpg";
+import { useUserPlan } from "@/hooks/useUserPlan";
+import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
 
 type AchievementCategory = "start" | "cashflow" | "reserve" | "goals" | "debts" | "organization";
 
@@ -366,12 +369,15 @@ function JourneyKpi({
 
 const IndependenceMap = () => {
   const navigate = useNavigate();
+  const { canUseBusinessProfile } = useUserPlan();
+  const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<JourneyStats | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     loadJourney();
-  }, []);
+  }, [currentProfile]);
 
   const loadJourney = async () => {
     try {
@@ -386,12 +392,36 @@ const IndependenceMap = () => {
       }
 
       const [transactions, banks, goals, debts, emergencyGoal, fixedCosts] = await Promise.all([
-        supabase.from("transactions").select("id, amount, type, date, created_at").order("date", { ascending: false }),
-        supabase.from("banks").select("id, current_balance, is_active").order("created_at", { ascending: false }),
-        supabase.from("custom_goals").select("id, current_amount, target_amount, is_completed").order("created_at", { ascending: false }),
-        supabase.from("debts").select("id, current_balance, total_amount, status").order("created_at", { ascending: false }),
-        supabase.from("emergency_goals").select("id, current_amount, target_amount, target_months, goal_type").maybeSingle(),
-        supabase.from("fixed_costs").select("id, amount, is_variable").order("created_at", { ascending: false }),
+        supabase
+          .from("transactions")
+          .select("id, amount, type, date, created_at")
+          .eq("profile_type", currentProfile)
+          .order("date", { ascending: false }),
+        supabase
+          .from("banks")
+          .select("id, current_balance, is_active")
+          .eq("profile_type", currentProfile)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("custom_goals")
+          .select("id, current_amount, target_amount, is_completed")
+          .eq("profile_type", currentProfile)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("debts")
+          .select("id, current_balance, total_amount, status")
+          .eq("profile_type", currentProfile)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("emergency_goals")
+          .select("id, current_amount, target_amount, target_months, goal_type")
+          .eq("profile_type", currentProfile)
+          .maybeSingle(),
+        supabase
+          .from("fixed_costs")
+          .select("id, amount, is_variable")
+          .eq("profile_type", currentProfile)
+          .order("created_at", { ascending: false }),
       ]);
 
       const firstError = [transactions, banks, goals, debts, emergencyGoal, fixedCosts].find((result) => result.error)?.error;
@@ -435,10 +465,24 @@ const IndependenceMap = () => {
   }, [achievements]);
 
   const nextAchievement = achievements.find((achievement) => !achievement.unlocked);
+  const handleProfileChange = (profile: FinancialProfile) => {
+    if (profile === "business" && !canUseBusinessProfile()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setCurrentProfile(profile);
+  };
+
+  const layoutProps = {
+    title: "Jornada Financeira",
+    showProfileSwitcher: true,
+    currentProfile,
+    onProfileChange: handleProfileChange,
+  };
 
   if (loading) {
     return (
-      <AppLayout title="Jornada Financeira">
+      <AppLayout {...layoutProps}>
         <div className="mx-auto max-w-7xl space-y-6">
           <Skeleton className="h-72 rounded-2xl" />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -458,7 +502,7 @@ const IndependenceMap = () => {
 
   if (!stats) {
     return (
-      <AppLayout title="Jornada Financeira">
+      <AppLayout {...layoutProps}>
         <div className="mx-auto flex min-h-[420px] max-w-3xl flex-col items-center justify-center rounded-2xl border border-border/80 bg-card p-8 text-center shadow-sm">
           <Loader2 className="mb-4 h-10 w-10 text-muted-foreground" />
           <h1 className="text-2xl font-bold text-foreground">Não foi possível carregar sua jornada</h1>
@@ -472,7 +516,7 @@ const IndependenceMap = () => {
   }
 
   return (
-    <AppLayout title="Jornada Financeira">
+    <AppLayout {...layoutProps}>
       <div className="mx-auto max-w-7xl space-y-8">
         <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-sm">
           <img src={heroImage} alt="Jornada financeira" className="absolute inset-0 h-full w-full object-cover" />
@@ -484,7 +528,7 @@ const IndependenceMap = () => {
               </Badge>
               <h1 className="max-w-3xl text-3xl font-bold tracking-normal sm:text-5xl">Sua evolução financeira em um mapa claro</h1>
               <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">
-                Acompanhe conquistas geradas a partir de bancos, transações, metas, dívidas e reserva de emergência.
+                Acompanhe conquistas do perfil {currentProfile === "personal" ? "pessoal" : "empresarial"} a partir de bancos, transações, metas, dívidas e reserva de emergência.
               </p>
             </div>
 
@@ -658,6 +702,15 @@ const IndependenceMap = () => {
           </CardContent>
         </Card>
       </div>
+      <UpgradePrompt
+        feature="Controle PF/PJ"
+        description="A jornada separada por perfil Pessoal e Empresarial está disponível no plano Pro Plus."
+        variant="modal"
+        requiredPlan="pro_plus"
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        benefits={["Jornada por perfil", "Conquistas separadas", "Metas por perfil", "Dashboard consolidado"]}
+      />
     </AppLayout>
   );
 };
