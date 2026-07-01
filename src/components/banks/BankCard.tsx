@@ -37,107 +37,102 @@ const accountTypeLabels: Record<string, { label: string; icon: React.ReactNode }
   wallet: { label: "Carteira Digital", icon: <Wallet className="h-4 w-4" /> },
 };
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+
 export const BankCard = ({ bank, onEdit, onDelete }: BankCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
+  const name = bank.name || "Banco";
+  const color = bank.color || "#ff6a00";
+  const balance = Number.isFinite(Number(bank.current_balance)) ? Number(bank.current_balance) : 0;
+  const logoBackground = color.startsWith("#") ? `${color}1A` : "hsl(var(--muted))";
   const accountType = accountTypeLabels[bank.account_type] || accountTypeLabels.checking;
 
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.25 }}
       >
-        <Card 
-          className="overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4"
-          style={{ borderLeftColor: bank.color }}
+        <Card
+          className="overflow-hidden rounded-2xl border-l-4 border-border/80 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+          style={{ borderLeftColor: color }}
         >
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-start justify-between gap-3">
-              {/* Logo and Info */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div 
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center overflow-hidden shrink-0"
-                  style={{ backgroundColor: `${bank.color}20` }}
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between gap-5">
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <div
+                  className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-background"
+                  style={{ backgroundColor: logoBackground }}
                 >
                   {bank.bank_slug ? (
-                    <BankLogo name={bank.bank_slug} size={48} className="w-full h-full" />
+                    <BankLogo name={bank.bank_slug} size={54} className="h-full w-full" />
                   ) : bank.logo_url ? (
-                    <img 
-                      src={bank.logo_url} 
-                      alt={bank.name} 
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={bank.logo_url} alt={name} className="h-full w-full object-cover" />
                   ) : (
-                    <Building2 className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: bank.color }} />
+                    <Building2 className="h-6 w-6" style={{ color }} />
                   )}
                 </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{bank.name}</h3>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h3 className="truncate text-lg font-bold text-foreground">{name}</h3>
                     {!bank.is_active && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inativo</Badge>
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                        Inativo
+                      </Badge>
                     )}
                   </div>
-                  
-                  <div className="flex items-center gap-1 text-muted-foreground text-xs sm:text-sm mt-0.5">
+
+                  <div className="mt-1 flex items-center gap-1 text-base text-muted-foreground">
                     {accountType.icon}
                     <span className="truncate">{accountType.label}</span>
                   </div>
-                  
+
                   {(bank.agency || bank.account_number) && (
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
                       {bank.agency && `Ag: ${bank.agency}`}
-                      {bank.agency && bank.account_number && " • "}
+                      {bank.agency && bank.account_number && " - "}
                       {bank.account_number && `Cc: ${bank.account_number}`}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Balance and Actions */}
-              <div className="flex items-start gap-1 shrink-0">
-                <div className="text-right">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Saldo</p>
-                  <p className={`text-sm sm:text-lg font-bold ${bank.current_balance >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {formatCurrency(bank.current_balance)}
+              <div className="flex shrink-0 items-start gap-2">
+                <div className="min-w-[124px] text-right">
+                  <p className="text-sm text-muted-foreground">Saldo</p>
+                  <p className={`truncate text-2xl font-bold ${balance >= 0 ? "text-success" : "text-danger"}`}>
+                    {formatCurrency(balance)}
                   </p>
                 </div>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 -mr-2">
+                    <Button variant="ghost" size="icon" className="-mr-2 h-9 w-9">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onEdit(bank)}>
-                      <Edit className="h-4 w-4 mr-2" />
+                      <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
-            
+
             {bank.notes && (
-              <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border line-clamp-1">
+              <p className="mt-4 line-clamp-1 border-t border-border pt-3 text-sm text-muted-foreground">
                 {bank.notes}
               </p>
             )}
@@ -150,7 +145,7 @@ export const BankCard = ({ bank, onEdit, onDelete }: BankCardProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir banco</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir "{bank.name}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir "{name}"? Esta ação não pode ser desfeita.
               As transações vinculadas a este banco não serão excluídas, mas perderão a associação.
             </AlertDialogDescription>
           </AlertDialogHeader>

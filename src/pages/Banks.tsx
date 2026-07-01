@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, Search, Building2, User, Crown } from "lucide-react";
+import { Plus, Search, Building2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,26 +10,30 @@ import { useBanks, Bank, BankFormData } from "@/hooks/useBanks";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
-import { LimitWarning } from "@/components/plans/LimitWarning";
 import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
-import { toast } from "sonner";
 
 const Banks = () => {
-  const navigate = useNavigate();
   const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const { banks, loading, createBank, updateBank, deleteBank, uploadLogo } = useBanks(currentProfile);
-  const { plan, usage, canAddBank, canUseBusinessProfile, refetch: refetchPlan } = useUserPlan();
+  const { canUseBusinessProfile, refetch: refetchPlan } = useUserPlan();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBank, setEditingBank] = useState<Bank | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const filteredBanks = banks.filter(
-    (bank) =>
-      bank.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (bank.notes && bank.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredBanks = banks.filter((bank) => {
+    if (!normalizedSearch) return true;
+
+    return [
+      bank.name,
+      bank.notes,
+      bank.account_type,
+      bank.agency,
+      bank.account_number,
+    ].some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
+  });
 
   const handleEdit = (bank: Bank) => {
     setEditingBank(bank);
@@ -54,7 +57,6 @@ const Banks = () => {
         if (newBank && logoFile) {
           await uploadLogo(logoFile, newBank.id);
         }
-        // Refetch plan usage after creating a bank
         refetchPlan();
       }
       setDialogOpen(false);
@@ -65,11 +67,6 @@ const Banks = () => {
   };
 
   const handleOpenDialog = () => {
-    if (!canAddBank()) {
-      toast.error(`Limite de ${plan.max_banks} bancos atingido. Faça upgrade para adicionar mais.`);
-      navigate("/upgrade");
-      return;
-    }
     setEditingBank(null);
     setDialogOpen(true);
   };
@@ -85,85 +82,84 @@ const Banks = () => {
   const isPersonal = currentProfile === "personal";
 
   return (
-    <AppLayout 
-      showProfileSwitcher 
-      currentProfile={currentProfile} 
+    <AppLayout
+      showProfileSwitcher
+      currentProfile={currentProfile}
       onProfileChange={handleProfileChange}
       title="Meus Bancos"
     >
-      <div className="space-y-6">
-        {/* Limit Warning */}
-        <LimitWarning 
-          resource="bancos" 
-          current={usage.banks_count} 
-          max={plan.max_banks} 
-        />
-        {/* Header with profile indicator */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full ${isPersonal ? 'bg-primary/10' : 'bg-secondary/10'}`}>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`rounded-full p-4 ${isPersonal ? "bg-primary/10" : "bg-secondary/10"}`}>
               {isPersonal ? (
-                <User className="h-6 w-6 text-primary" />
+                <User className="h-7 w-7 text-primary" />
               ) : (
-                <Building2 className="h-6 w-6 text-secondary" />
+                <Building2 className="h-7 w-7 text-secondary" />
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                Bancos {isPersonal ? 'Pessoais' : 'Empresariais'}
+              <h1 className="flex items-center gap-2 text-3xl font-bold">
+                Bancos {isPersonal ? "Pessoais" : "Empresariais"}
               </h1>
-              <p className="text-muted-foreground">
-                Gerencie suas contas {isPersonal ? 'pessoais' : 'empresariais'}
+              <p className="text-lg text-muted-foreground">
+                Gerencie suas contas {isPersonal ? "pessoais" : "empresariais"}
               </p>
             </div>
           </div>
-          <Button onClick={handleOpenDialog} className="shrink-0">
-            <Plus className="h-4 w-4 mr-2" />
+
+          <Button onClick={handleOpenDialog} className="h-12 shrink-0 rounded-2xl px-8 text-base font-bold">
+            <Plus className="mr-2 h-4 w-4" />
             Novo Banco
           </Button>
         </div>
 
-        {/* Overview Cards */}
-        {!loading && banks.length > 0 && <BanksOverview banks={banks} />}
+        {loading ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32 rounded-2xl" />
+            ))}
+          </div>
+        ) : banks.length > 0 ? (
+          <BanksOverview banks={banks} />
+        ) : null}
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative mt-10 max-w-2xl">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar bancos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="h-14 rounded-2xl pl-12 text-base"
           />
         </div>
 
-        {/* Banks List */}
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 xl:grid-cols-2">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-32" />
+              <Skeleton key={i} className="h-32 rounded-2xl" />
             ))}
           </div>
         ) : filteredBanks.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? "Nenhum banco encontrado" : `Nenhum banco ${isPersonal ? 'pessoal' : 'empresarial'} cadastrado`}
+          <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
+            <Building2 className="mb-5 h-20 w-20 text-muted-foreground/35" />
+            <h3 className="mb-3 text-2xl font-bold">
+              {searchQuery ? "Nenhum banco encontrado" : `Nenhum banco ${isPersonal ? "pessoal" : "empresarial"} cadastrado`}
             </h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="mb-6 text-lg text-muted-foreground">
               {searchQuery
                 ? "Tente buscar com outros termos"
-                : `Comece cadastrando seu primeiro banco ${isPersonal ? 'pessoal' : 'empresarial'}`}
+                : `Comece cadastrando seu primeiro banco ${isPersonal ? "pessoal" : "empresarial"}`}
             </p>
             {!searchQuery && (
-              <Button onClick={handleOpenDialog}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={handleOpenDialog} className="h-12 rounded-2xl px-8 text-base font-bold">
+                <Plus className="mr-2 h-4 w-4" />
                 Cadastrar Primeiro Banco
               </Button>
             )}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 xl:grid-cols-2">
             {filteredBanks.map((bank) => (
               <BankCard
                 key={bank.id}

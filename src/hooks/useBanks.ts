@@ -39,12 +39,37 @@ export interface BankFormData {
   profile_type: "personal" | "business";
 }
 
+const toNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeBank = (bank: any): Bank => ({
+  ...bank,
+  name: bank?.name || "Banco",
+  logo_url: bank?.logo_url || null,
+  bank_slug: bank?.bank_slug || null,
+  initial_balance: toNumber(bank?.initial_balance),
+  current_balance: toNumber(bank?.current_balance),
+  account_type: bank?.account_type || "checking",
+  agency: bank?.agency || null,
+  account_number: bank?.account_number || null,
+  color: bank?.color || "#ff6a00",
+  notes: bank?.notes || null,
+  opening_date: bank?.opening_date || null,
+  is_active: bank?.is_active !== false && bank?.is_active !== 0,
+  profile_type: bank?.profile_type === "business" ? "business" : "personal",
+});
+
+const normalizeBanks = (banks: any[] | null | undefined) => (banks || []).map(normalizeBank);
+
 export const useBanks = (profileType: FinancialProfile = "personal") => {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [allBanks, setAllBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadBanks = useCallback(async () => {
+    setLoading(true);
     try {
       // Load banks filtered by profile type
       const { data, error } = await supabase
@@ -65,14 +90,14 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
               .eq("profile_type", profileType)
               .order("name");
             if (!retryError) {
-              setBanks((retryData as Bank[]) || []);
+              setBanks(normalizeBanks(retryData));
               return;
             }
           }
         }
         throw error;
       }
-      setBanks((data as Bank[]) || []);
+      setBanks(normalizeBanks(data));
     } catch (error: any) {
       toast.error("Erro ao carregar bancos: " + error.message);
     } finally {
@@ -98,14 +123,14 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
               .select("*")
               .order("name");
             if (!retryError) {
-              setAllBanks((retryData as Bank[]) || []);
+              setAllBanks(normalizeBanks(retryData));
               return;
             }
           }
         }
         throw error;
       }
-      setAllBanks((data as Bank[]) || []);
+      setAllBanks(normalizeBanks(data));
     } catch (error: any) {
       console.error("Error loading all banks:", error);
     }
@@ -139,8 +164,8 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
 
       if (error) throw error;
       toast.success("Banco cadastrado com sucesso!");
-      await loadBanks();
-      return data as Bank;
+      await Promise.all([loadBanks(), loadAllBanks()]);
+      return normalizeBank(data);
     } catch (error: any) {
       toast.error("Erro ao criar banco: " + error.message);
       return null;
@@ -165,7 +190,7 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
 
       if (error) throw error;
       toast.success("Banco atualizado com sucesso!");
-      await loadBanks();
+      await Promise.all([loadBanks(), loadAllBanks()]);
       return true;
     } catch (error: any) {
       toast.error("Erro ao atualizar banco: " + error.message);
@@ -182,7 +207,7 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
 
       if (error) throw error;
       toast.success("Banco removido com sucesso!");
-      await loadBanks();
+      await Promise.all([loadBanks(), loadAllBanks()]);
       return true;
     } catch (error: any) {
       toast.error("Erro ao remover banco: " + error.message);
@@ -217,11 +242,11 @@ export const useBanks = (profileType: FinancialProfile = "personal") => {
   };
 
   const getTotalBalance = () => {
-    return banks.filter(b => b.is_active).reduce((sum, bank) => sum + bank.current_balance, 0);
+    return banks.filter(b => b.is_active).reduce((sum, bank) => sum + toNumber(bank.current_balance), 0);
   };
 
   const getAllBanksTotalBalance = () => {
-    return allBanks.filter(b => b.is_active).reduce((sum, bank) => sum + bank.current_balance, 0);
+    return allBanks.filter(b => b.is_active).reduce((sum, bank) => sum + toNumber(bank.current_balance), 0);
   };
 
   useEffect(() => {

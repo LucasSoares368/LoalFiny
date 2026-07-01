@@ -9,19 +9,25 @@ interface BanksOverviewProps {
 
 export const BanksOverview = ({ banks }: BanksOverviewProps) => {
   const activeBanks = banks.filter((b) => b.is_active);
+  const toNumber = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
   
   const totalBalance = activeBanks.reduce(
-    (sum, bank) => sum + bank.current_balance,
+    (sum, bank) => sum + toNumber(bank.current_balance),
     0
   );
   
   const positiveBalance = activeBanks
-    .filter((b) => b.current_balance > 0)
-    .reduce((sum, b) => sum + b.current_balance, 0);
+    .filter((b) => toNumber(b.current_balance) > 0)
+    .reduce((sum, b) => sum + toNumber(b.current_balance), 0);
     
-  const negativeBalance = activeBanks
-    .filter((b) => b.current_balance < 0)
-    .reduce((sum, b) => sum + b.current_balance, 0);
+  const negativeBalance = Math.abs(
+    activeBanks
+      .filter((b) => toNumber(b.current_balance) < 0)
+      .reduce((sum, b) => sum + toNumber(b.current_balance), 0)
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -34,6 +40,7 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
     {
       title: "Saldo Total",
       value: formatCurrency(totalBalance),
+      description: "Saldo consolidado",
       icon: Wallet,
       color: totalBalance >= 0 ? "text-success" : "text-danger",
       bgColor: totalBalance >= 0 ? "bg-success/10" : "bg-danger/10",
@@ -41,6 +48,7 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
     {
       title: "Contas Ativas",
       value: activeBanks.length.toString(),
+      description: "Cadastradas",
       icon: Building2,
       color: "text-primary",
       bgColor: "bg-primary/10",
@@ -48,6 +56,7 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
     {
       title: "Saldo Positivo",
       value: formatCurrency(positiveBalance),
+      description: "Contas no positivo",
       icon: TrendingUp,
       color: "text-success",
       bgColor: "bg-success/10",
@@ -55,6 +64,7 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
     {
       title: "Saldo Negativo",
       value: formatCurrency(negativeBalance),
+      description: "Contas no negativo",
       icon: TrendingDown,
       color: "text-danger",
       bgColor: "bg-danger/10",
@@ -62,7 +72,7 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map((stat, index) => (
         <motion.div
           key={stat.title}
@@ -70,19 +80,22 @@ export const BanksOverview = ({ banks }: BanksOverviewProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
         >
-          <Card className="h-full">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
-                </div>
-                <span className="text-xs font-medium text-muted-foreground truncate">
+          <Card className="h-full rounded-2xl border-border/80 shadow-sm">
+            <CardContent className="flex min-h-[128px] flex-col justify-between p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-muted-foreground">
                   {stat.title}
                 </span>
+                <div className={`rounded-xl p-3 ${stat.bgColor}`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
               </div>
-              <p className={`text-lg sm:text-xl font-bold ${stat.color} truncate`}>
-                {stat.value}
-              </p>
+              <div className="space-y-1">
+                <p className={`truncate text-2xl font-bold sm:text-3xl ${stat.color}`}>
+                  {stat.value}
+                </p>
+                <p className="text-sm text-muted-foreground">{stat.description}</p>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
