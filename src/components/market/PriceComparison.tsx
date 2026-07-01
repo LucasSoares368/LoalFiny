@@ -98,7 +98,7 @@ export const PriceComparison = ({ products, stores, priceRecords }: PriceCompari
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -131,12 +131,12 @@ export const PriceComparison = ({ products, stores, priceRecords }: PriceCompari
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {priceStats.map((stat) => stat && (
-              <Card key={stat.store.id}>
+              <Card key={stat.store.id} className="rounded-2xl border-border/80 bg-card shadow-sm">
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl"
                         style={{ backgroundColor: stat.store.color + "20" }}
                       >
                         <span 
@@ -194,7 +194,7 @@ export const PriceComparison = ({ products, stores, priceRecords }: PriceCompari
           </div>
 
           {chartData.length > 1 && (
-            <Card>
+            <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
               <CardHeader>
                 <CardTitle>Evolução de Preços</CardTitle>
                 <CardDescription>
@@ -247,7 +247,7 @@ export const PriceComparison = ({ products, stores, priceRecords }: PriceCompari
       )}
 
       {selectedProductId && priceStats.length === 0 && (
-        <Card>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
           <CardContent className="py-8 text-center text-muted-foreground">
             Nenhum registro de preço encontrado para este produto
           </CardContent>

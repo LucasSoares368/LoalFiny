@@ -82,7 +82,7 @@ export const ProductManager = ({ products, onProductsChange }: ProductManagerPro
 
   return (
     <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -175,7 +175,7 @@ export const ProductManager = ({ products, onProductsChange }: ProductManagerPro
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Package className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -203,7 +203,7 @@ export const ProductManager = ({ products, onProductsChange }: ProductManagerPro
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: -100 }}
-                          className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg border bg-card gap-2"
+                          className="flex items-center justify-between gap-2 rounded-2xl border bg-card p-2.5 sm:p-3"
                         >
                           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                             <span className="text-xl sm:text-2xl shrink-0">{product.icon}</span>

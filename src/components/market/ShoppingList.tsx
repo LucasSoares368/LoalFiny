@@ -96,7 +96,7 @@ function SortableItem({ item, onToggle, onDelete }: SortableItemProps) {
       style={style}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
+      className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
         isDragging ? "opacity-50 shadow-lg" : ""
       } ${
         item.is_purchased
@@ -163,7 +163,7 @@ function MobileItem({ item, index, total, onToggle, onDelete, onMove }: MobileIt
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-2 p-3 rounded-lg border transition-colors ${
+      className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
         item.is_purchased ? "bg-muted/50 border-muted" : "bg-card hover:bg-muted/30"
       }`}
     >
@@ -420,9 +420,9 @@ export function ShoppingList() {
     <div className="space-y-4 sm:space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <Card>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
           <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
+            <div className="p-1.5 sm:p-2 rounded-2xl bg-primary/10 shrink-0">
               <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
             <div className="min-w-0">
@@ -431,9 +431,9 @@ export function ShoppingList() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
           <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-warning/10 shrink-0">
+            <div className="p-1.5 sm:p-2 rounded-2xl bg-warning/10 shrink-0">
               <Package className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
             </div>
             <div className="min-w-0">
@@ -442,9 +442,9 @@ export function ShoppingList() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
           <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 shrink-0">
+            <div className="p-1.5 sm:p-2 rounded-2xl bg-success/10 shrink-0">
               <Check className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
             </div>
             <div className="min-w-0">
@@ -456,7 +456,7 @@ export function ShoppingList() {
       </div>
 
       {/* Add Item Form */}
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -517,7 +517,7 @@ export function ShoppingList() {
       </Card>
 
       {/* Shopping List */}
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
@@ -607,7 +607,7 @@ export function ShoppingList() {
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50 border-muted"
+                          className="flex items-center gap-2 p-3 rounded-2xl border bg-muted/50 border-muted"
                         >
                           <div className="w-4" /> {/* Spacer for alignment */}
                           <Checkbox

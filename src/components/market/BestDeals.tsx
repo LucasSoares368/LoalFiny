@@ -104,7 +104,7 @@ export const BestDeals = ({ products, stores, priceRecords }: BestDealsProps) =>
 
   if (priceRecords.length === 0) {
     return (
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardContent className="py-12 text-center">
           <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-lg font-medium">Nenhum preço registrado ainda</p>
@@ -120,7 +120,7 @@ export const BestDeals = ({ products, stores, priceRecords }: BestDealsProps) =>
     <div className="space-y-6">
       {/* Store Recommendations */}
       {storeRecommendations.length > 0 && (
-        <Card>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Store className="h-5 w-5" />
@@ -138,11 +138,11 @@ export const BestDeals = ({ products, stores, priceRecords }: BestDealsProps) =>
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="p-4 rounded-lg border bg-card"
+                  className="rounded-2xl border bg-card p-4"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl"
                       style={{ backgroundColor: rec.store.color + "20" }}
                     >
                       <Store className="h-6 w-6" style={{ color: rec.store.color }} />
@@ -174,7 +174,7 @@ export const BestDeals = ({ products, stores, priceRecords }: BestDealsProps) =>
       )}
 
       {/* Best Deals List */}
-      <Card>
+      <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-success" />
@@ -197,7 +197,7 @@ export const BestDeals = ({ products, stores, priceRecords }: BestDealsProps) =>
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between rounded-2xl border bg-card p-4 transition-colors hover:bg-muted/50"
                 >
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{deal.product.icon}</span>

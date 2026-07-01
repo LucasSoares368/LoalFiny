@@ -75,7 +75,7 @@ export const PriceRecorder = ({ products, stores, onRecordAdded }: PriceRecorder
   const selectedProduct = products.find(p => p.id === formData.productId);
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="mx-auto max-w-2xl rounded-2xl border-border/80 bg-card shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Receipt className="h-5 w-5" />
