@@ -90,7 +90,7 @@ export const TABLE_COLUMNS = {
   ],
   categories: ["color", "created_at", "icon", "id", "is_default", "name", "profile_type", "user_id"],
   cookie_consents: ["consent_date", "id", "preferences", "updated_at", "user_id"],
-  custom_goals: ["category", "color", "completed_at", "created_at", "current_amount", "deadline", "description", "destination_bank_id", "goal_mode", "icon", "id", "is_completed", "name", "profile_type", "target_amount", "updated_at", "user_id"],
+  custom_goals: ["category", "color", "completed_at", "created_at", "current_amount", "deadline", "debt_id", "description", "destination_bank_id", "goal_mode", "icon", "id", "is_completed", "name", "profile_type", "target_amount", "updated_at", "user_id"],
   debt_payments: ["amount", "bank_id", "created_at", "debt_id", "id", "notes", "payment_date", "payment_method", "profile_type", "transaction_id", "user_id"],
   debts: ["created_at", "creditor", "current_balance", "due_day", "id", "interest_rate", "minimum_payment", "name", "notes", "profile_type", "start_date", "status", "total_amount", "updated_at", "user_id"],
   emergency_goals: ["created_at", "current_amount", "goal_type", "id", "target_amount", "target_months", "updated_at", "user_id"],

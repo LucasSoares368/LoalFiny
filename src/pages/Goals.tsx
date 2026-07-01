@@ -62,6 +62,7 @@ interface Goal {
   profile_type: "personal" | "business";
   goal_mode: "transfer" | "expense";
   destination_bank_id: string | null;
+  debt_id: string | null;
 }
 
 interface Bank {
@@ -70,6 +71,13 @@ interface Bank {
   account_type: string;
   current_balance: number;
   is_active: boolean;
+}
+
+interface Debt {
+  id: string;
+  name: string;
+  current_balance: number;
+  status: string;
 }
 
 const goalSchema = z.object({
@@ -81,6 +89,7 @@ const goalSchema = z.object({
   category: z.string().max(50).optional(),
   goal_mode: z.enum(["transfer", "expense"]),
   destination_bank_id: z.string().optional(),
+  debt_id: z.string().optional(),
 });
 
 const goalCategories = [
@@ -103,6 +112,7 @@ const emptyForm = () => ({
   category: "Outro",
   goal_mode: "expense" as "transfer" | "expense",
   destination_bank_id: "",
+  debt_id: "",
 });
 
 const toNumber = (value: unknown) => {
@@ -138,6 +148,7 @@ const normalizeGoal = (goal: any): Goal => ({
   profile_type: goal?.profile_type === "business" ? "business" : "personal",
   goal_mode: goal?.goal_mode === "transfer" ? "transfer" : "expense",
   destination_bank_id: goal?.destination_bank_id || null,
+  debt_id: goal?.debt_id || null,
 });
 
 const calculateProgress = (current: number, target: number) => {
@@ -210,6 +221,8 @@ const Goals = () => {
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debtsLoading, setDebtsLoading] = useState(true);
   const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
   const [contributionAmount, setContributionAmount] = useState(0);
   const [contributionBankId, setContributionBankId] = useState("");
@@ -293,6 +306,39 @@ const Goals = () => {
     loadBanks();
   }, [loadBanks]);
 
+  const loadDebts = useCallback(async () => {
+    try {
+      setDebtsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("debts")
+        .select("id, name, current_balance, status")
+        .eq("user_id", user.id)
+        .eq("profile_type", currentProfile)
+        .eq("status", "active")
+        .order("current_balance", { ascending: false });
+
+      if (error) throw error;
+
+      setDebts((data || []).map((debt: any) => ({
+        id: debt.id,
+        name: debt.name || "Dívida",
+        current_balance: toNumber(debt.current_balance),
+        status: debt.status || "active",
+      })));
+    } catch (error: any) {
+      toast.error("Erro ao carregar dívidas: " + error.message);
+    } finally {
+      setDebtsLoading(false);
+    }
+  }, [currentProfile]);
+
+  useEffect(() => {
+    loadDebts();
+  }, [loadDebts]);
+
   const filteredGoals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return goals;
@@ -338,6 +384,7 @@ const Goals = () => {
       category: goal.category || "Outro",
       goal_mode: goal.goal_mode || "expense",
       destination_bank_id: goal.destination_bank_id || "",
+      debt_id: goal.debt_id || "",
     });
     setIsDialogOpen(true);
   };
@@ -353,6 +400,7 @@ const Goals = () => {
         category: formData.category,
         goal_mode: formData.goal_mode,
         destination_bank_id: formData.destination_bank_id || undefined,
+        debt_id: formData.debt_id || undefined,
       });
 
       setIsSaving(true);
@@ -379,6 +427,7 @@ const Goals = () => {
         profile_type: currentProfile,
         goal_mode: validatedData.goal_mode,
         destination_bank_id: validatedData.goal_mode === "transfer" ? validatedData.destination_bank_id || null : null,
+        debt_id: validatedData.goal_mode === "expense" ? validatedData.debt_id || null : null,
         color: categoryData?.color || "#ff6a00",
         icon: categoryData?.icon || "M",
         is_completed: isCompleted,
@@ -478,6 +527,33 @@ const Goals = () => {
     return createdCategory?.id || null;
   };
 
+  const getDebtCategoryId = async (userId: string) => {
+    const { data: categories, error } = await supabase
+      .from("categories")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    const existing = (categories || []).find((category: any) => normalizeText(category.name || "") === "dividas");
+    if (existing?.id) return existing.id;
+
+    const { data: createdCategory, error: createError } = await supabase
+      .from("categories")
+      .insert({
+        user_id: userId,
+        name: "Dívidas",
+        icon: "💳",
+        color: "#ef4444",
+        profile_type: currentProfile,
+      })
+      .select("id")
+      .single();
+
+    if (createError) throw createError;
+    return createdCategory?.id || null;
+  };
+
   const openContributionDialog = (goal: Goal) => {
     const onlyBank = banks.length === 1 ? banks[0] : null;
     const defaultMode = shouldDefaultGoalToTransfer(goal) ? "transfer" : "expense";
@@ -523,30 +599,42 @@ const Goals = () => {
 
       const destinationBank = banks.find((bank) => bank.id === contributionDestinationBankId);
       if (contributionMode === "transfer" && !destinationBank) throw new Error("Banco de destino nao encontrado");
+      const linkedDebt = contributionGoal.debt_id ? debts.find((debt) => debt.id === contributionGoal.debt_id) : null;
+
+      if (linkedDebt && contributionAmount > linkedDebt.current_balance) {
+        toast.error("Valor maior que o saldo devedor da dívida");
+        return;
+      }
 
       const newAmount = Math.min(contributionGoal.current_amount + contributionAmount, contributionGoal.target_amount);
       const isCompleted = newAmount >= contributionGoal.target_amount;
-      const categoryId = await getGoalsCategoryId(user.id);
       const isTransfer = contributionMode === "transfer";
+      const categoryId = linkedDebt ? await getDebtCategoryId(user.id) : await getGoalsCategoryId(user.id);
       const contributionLabel = isTransfer && destinationBank
         ? `Transferencia para meta: ${contributionGoal.name} -> ${destinationBank.name}`
-        : `Aporte em meta: ${contributionGoal.name}`;
+        : linkedDebt
+          ? `Pagamento de dívida pela meta: ${contributionGoal.name} -> ${linkedDebt.name}`
+          : `Aporte em meta: ${contributionGoal.name}`;
 
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        amount: contributionAmount,
-        type: isTransfer ? "transfer" : "expense",
-        category_id: categoryId,
-        description: contributionNotes.trim()
-          ? `${contributionLabel} - ${contributionNotes.trim()}`
-          : contributionLabel,
-        date: getToday(),
-        transaction_time: getCurrentTime(),
-        profile_type: currentProfile,
-        bank_id: contributionBankId,
-        payment_method: isTransfer ? "goal_transfer" : contributionPaymentMethod,
-        is_essential: false,
-      });
+      const { data: transaction, error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          amount: contributionAmount,
+          type: isTransfer ? "transfer" : "expense",
+          category_id: categoryId,
+          description: contributionNotes.trim()
+            ? `${contributionLabel} - ${contributionNotes.trim()}`
+            : contributionLabel,
+          date: getToday(),
+          transaction_time: getCurrentTime(),
+          profile_type: currentProfile,
+          bank_id: contributionBankId,
+          payment_method: isTransfer ? "goal_transfer" : contributionPaymentMethod,
+          is_essential: !!linkedDebt,
+        })
+        .select("id")
+        .single();
 
       if (transactionError) throw transactionError;
 
@@ -566,6 +654,33 @@ const Goals = () => {
         if (destinationBankError) throw destinationBankError;
       }
 
+      if (linkedDebt) {
+        const newDebtBalance = Math.max(linkedDebt.current_balance - contributionAmount, 0);
+        const { error: paymentError } = await supabase.from("debt_payments").insert({
+          debt_id: linkedDebt.id,
+          bank_id: contributionBankId,
+          transaction_id: transaction?.id || null,
+          user_id: user.id,
+          amount: contributionAmount,
+          payment_date: getToday(),
+          payment_method: contributionPaymentMethod,
+          profile_type: currentProfile,
+          notes: contributionNotes.trim() || `Pagamento pela meta ${contributionGoal.name}`,
+        });
+
+        if (paymentError) throw paymentError;
+
+        const { error: debtError } = await supabase
+          .from("debts")
+          .update({
+            current_balance: newDebtBalance,
+            status: newDebtBalance <= 0 ? "paid" : "active",
+          })
+          .eq("id", linkedDebt.id);
+
+        if (debtError) throw debtError;
+      }
+
       const { error: goalError } = await supabase
         .from("custom_goals")
         .update({
@@ -577,9 +692,9 @@ const Goals = () => {
 
       if (goalError) throw goalError;
 
-      toast.success(isCompleted ? "Meta concluída!" : "Aporte registrado na meta!");
+      toast.success(linkedDebt && isCompleted ? "Meta concluída e dívida atualizada!" : isCompleted ? "Meta concluída!" : "Aporte registrado na meta!");
       setContributionGoal(null);
-      await Promise.all([loadGoals(), loadBanks()]);
+      await Promise.all([loadGoals(), loadBanks(), loadDebts()]);
     } catch (error: any) {
       toast.error("Erro ao registrar aporte: " + error.message);
     } finally {
@@ -862,6 +977,7 @@ const Goals = () => {
                     ...formData,
                     goal_mode: value as "transfer" | "expense",
                     destination_bank_id: value === "transfer" ? formData.destination_bank_id : "",
+                    debt_id: value === "expense" ? formData.debt_id : "",
                   })}
                 >
                   <SelectTrigger className="h-11 rounded-xl">
@@ -889,6 +1005,36 @@ const Goals = () => {
                       {banks.map((bank) => (
                         <SelectItem key={bank.id} value={bank.id}>
                           {bank.name} - {formatCurrency(bank.current_balance)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.goal_mode === "expense" && (
+                <div className="space-y-2">
+                  <Label>Dívida vinculada</Label>
+                  <Select
+                    value={formData.debt_id || "none"}
+                    onValueChange={(value) => {
+                      const debt = debts.find((item) => item.id === value);
+                      setFormData({
+                        ...formData,
+                        debt_id: value === "none" ? "" : value,
+                        target_amount: debt && formData.target_amount <= 0 ? debt.current_balance : formData.target_amount,
+                      });
+                    }}
+                    disabled={debtsLoading}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder={debtsLoading ? "Carregando..." : "Opcional"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma dívida</SelectItem>
+                      {debts.map((debt) => (
+                        <SelectItem key={debt.id} value={debt.id}>
+                          {debt.name} - {formatCurrency(debt.current_balance)}
                         </SelectItem>
                       ))}
                     </SelectContent>
