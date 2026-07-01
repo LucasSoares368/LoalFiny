@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -27,12 +26,24 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Target, TrendingUp, Calendar, CheckCircle2, Loader2, Crown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Calendar,
+  CheckCircle2,
+  Edit2,
+  Loader2,
+  Plus,
+  Search,
+  Target,
+  Trash2,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useUserPlan } from "@/hooks/useUserPlan";
-import { LimitWarning } from "@/components/plans/LimitWarning";
 
 interface Goal {
   id: string;
@@ -50,7 +61,7 @@ interface Goal {
 }
 
 const goalSchema = z.object({
-  name: z.string().min(3, "Nome muito curto").max(100, "Nome muito longo"),
+  name: z.string().trim().min(3, "Nome muito curto").max(100, "Nome muito longo"),
   description: z.string().max(500, "Descrição muito longa").optional(),
   target_amount: z.number().positive("Valor deve ser maior que zero").max(999999999.99, "Valor muito alto"),
   current_amount: z.number().min(0, "Valor não pode ser negativo").max(999999999.99, "Valor muito alto"),
@@ -59,48 +70,123 @@ const goalSchema = z.object({
 });
 
 const goalCategories = [
-  { value: "Emergência", label: "🚨 Emergência", color: "#ef4444" },
-  { value: "Viagem", label: "✈️ Viagem", color: "#3b82f6" },
-  { value: "Educação", label: "📚 Educação", color: "#8b5cf6" },
-  { value: "Casa", label: "🏠 Casa", color: "#f59e0b" },
-  { value: "Veículo", label: "🚗 Veículo", color: "#10b981" },
-  { value: "Investimento", label: "💰 Investimento", color: "#06b6d4" },
-  { value: "Saúde", label: "🏥 Saúde", color: "#ec4899" },
-  { value: "Outro", label: "🎯 Outro", color: "#6366f1" },
+  { value: "Emergência", label: "Emergência", icon: "!", color: "#ef4444" },
+  { value: "Viagem", label: "Viagem", icon: "V", color: "#3b82f6" },
+  { value: "Educação", label: "Educação", icon: "E", color: "#8b5cf6" },
+  { value: "Casa", label: "Casa", icon: "C", color: "#f59e0b" },
+  { value: "Veículo", label: "Veículo", icon: "A", color: "#10b981" },
+  { value: "Investimento", label: "Investimento", icon: "$", color: "#06b6d4" },
+  { value: "Saúde", label: "Saúde", icon: "+", color: "#ec4899" },
+  { value: "Outro", label: "Outro", icon: "M", color: "#ff6a00" },
 ];
+
+const emptyForm = () => ({
+  name: "",
+  description: "",
+  target_amount: 0,
+  current_amount: 0,
+  deadline: "",
+  category: "Outro",
+});
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const normalizeGoal = (goal: any): Goal => ({
+  ...goal,
+  name: goal?.name || "Meta",
+  description: goal?.description || null,
+  target_amount: toNumber(goal?.target_amount),
+  current_amount: toNumber(goal?.current_amount),
+  deadline: goal?.deadline || null,
+  category: goal?.category || "Outro",
+  color: goal?.color || "#ff6a00",
+  icon: goal?.icon || "M",
+  is_completed: goal?.is_completed === true || goal?.is_completed === 1,
+  completed_at: goal?.completed_at || null,
+});
+
+const calculateProgress = (current: number, target: number) => {
+  if (!target) return 0;
+  return Math.min((current / target) * 100, 100);
+};
+
+const getDaysRemaining = (deadline: string | null) => {
+  if (!deadline) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadlineDate = new Date(`${deadline}T00:00:00`);
+  const diffTime = deadlineDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+function GoalKpi({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tone = "primary",
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: typeof Target;
+  tone?: "primary" | "success" | "danger";
+}) {
+  const toneClasses = {
+    primary: "bg-primary/10 text-primary",
+    success: "bg-emerald-500/15 text-emerald-600",
+    danger: "bg-red-500/15 text-red-500",
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-muted-foreground">{title}</p>
+          <p className={`text-3xl font-bold ${tone === "success" ? "text-emerald-600" : tone === "danger" ? "text-red-500" : "text-foreground"}`}>
+            {value}
+          </p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const Goals = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+  const [quickAmounts, setQuickAmounts] = useState<Record<string, number>>({});
   const { plan, usage, canAddGoal, refetch: refetchPlan } = useUserPlan();
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    target_amount: 0,
-    current_amount: 0,
-    deadline: "",
-    category: "Outro",
-  });
+  const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) navigate("/auth");
+    };
+
     checkAuth();
-    loadGoals();
-  }, []);
+  }, [navigate]);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
-  const loadGoals = async () => {
+  const loadGoals = useCallback(async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -111,14 +197,35 @@ const Goals = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      if (data) setGoals(data);
-    } catch (error) {
-      console.error("Error loading goals:", error);
-      toast.error("Erro ao carregar metas");
+      setGoals((data || []).map(normalizeGoal));
+    } catch (error: any) {
+      toast.error("Erro ao carregar metas: " + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadGoals();
+  }, [loadGoals]);
+
+  const filteredGoals = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return goals;
+    return goals.filter((goal) =>
+      [goal.name, goal.description, goal.category]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(query))
+    );
+  }, [goals, searchQuery]);
+
+  const activeGoals = filteredGoals.filter((goal) => !goal.is_completed);
+  const completedGoals = filteredGoals.filter((goal) => goal.is_completed);
+  const allActiveGoals = goals.filter((goal) => !goal.is_completed);
+  const allCompletedGoals = goals.filter((goal) => goal.is_completed);
+  const totalTarget = goals.reduce((sum, goal) => sum + goal.target_amount, 0);
+  const totalSaved = goals.reduce((sum, goal) => sum + goal.current_amount, 0);
+  const globalProgress = calculateProgress(totalSaved, totalTarget);
 
   const openCreateDialog = () => {
     if (!canAddGoal()) {
@@ -126,15 +233,9 @@ const Goals = () => {
       navigate("/upgrade");
       return;
     }
+
     setEditingGoal(null);
-    setFormData({
-      name: "",
-      description: "",
-      target_amount: 0,
-      current_amount: 0,
-      deadline: "",
-      category: "Outro",
-    });
+    setFormData(emptyForm());
     setIsDialogOpen(true);
   };
 
@@ -167,41 +268,32 @@ const Goals = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      const categoryData = goalCategories.find(c => c.value === formData.category);
-      const goalData: any = {
+      const categoryData = goalCategories.find((category) => category.value === formData.category);
+      const isCompleted = validatedData.current_amount >= validatedData.target_amount;
+      const goalData = {
         name: validatedData.name,
+        description: validatedData.description || null,
         target_amount: validatedData.target_amount,
         current_amount: validatedData.current_amount,
+        deadline: validatedData.deadline || null,
+        category: validatedData.category || "Outro",
         user_id: user.id,
-        color: categoryData?.color || "#6366f1",
-        icon: categoryData?.label.split(" ")[0] || "🎯",
+        color: categoryData?.color || "#ff6a00",
+        icon: categoryData?.icon || "M",
+        is_completed: isCompleted,
+        completed_at: isCompleted ? new Date().toISOString() : null,
       };
 
-      if (validatedData.description) goalData.description = validatedData.description;
-      if (validatedData.deadline) goalData.deadline = validatedData.deadline;
-      if (validatedData.category) goalData.category = validatedData.category;
-
-      let error;
-      if (editingGoal) {
-        ({ error } = await supabase
-          .from("custom_goals")
-          .update(goalData)
-          .eq("id", editingGoal.id));
-      } else {
-        ({ error } = await supabase
-          .from("custom_goals")
-          .insert(goalData));
-      }
+      const { error } = editingGoal
+        ? await supabase.from("custom_goals").update(goalData).eq("id", editingGoal.id)
+        : await supabase.from("custom_goals").insert(goalData);
 
       if (error) throw error;
 
       toast.success(editingGoal ? "Meta atualizada!" : "Meta criada!");
       setIsDialogOpen(false);
-      loadGoals();
-      // Refetch plan usage after creating a goal
-      if (!editingGoal) {
-        refetchPlan();
-      }
+      await loadGoals();
+      if (!editingGoal) refetchPlan();
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -217,14 +309,11 @@ const Goals = () => {
     if (!goalToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from("custom_goals")
-        .delete()
-        .eq("id", goalToDelete);
-
+      const { error } = await supabase.from("custom_goals").delete().eq("id", goalToDelete);
       if (error) throw error;
       toast.success("Meta excluída!");
-      loadGoals();
+      await loadGoals();
+      refetchPlan();
     } catch (error: any) {
       toast.error("Erro ao excluir meta: " + error.message);
     } finally {
@@ -232,304 +321,277 @@ const Goals = () => {
     }
   };
 
-  const handleUpdateProgress = async (goal: Goal, newAmount: number) => {
+  const handleUpdateProgress = async (goal: Goal, addAmount: number) => {
+    if (!Number.isFinite(addAmount) || addAmount <= 0) {
+      toast.error("Informe um valor maior que zero");
+      return;
+    }
+
+    const newAmount = Math.min(goal.current_amount + addAmount, goal.target_amount);
+    const isCompleted = newAmount >= goal.target_amount;
+
     try {
       const { error } = await supabase
         .from("custom_goals")
-        .update({ current_amount: newAmount })
+        .update({
+          current_amount: newAmount,
+          is_completed: isCompleted,
+          completed_at: isCompleted ? new Date().toISOString() : null,
+        })
         .eq("id", goal.id);
 
       if (error) throw error;
-      
-      if (newAmount >= goal.target_amount && !goal.is_completed) {
-        toast.success("🎉 Parabéns! Meta concluída!");
-      }
-      
+
+      toast.success(isCompleted ? "Meta concluída!" : "Progresso atualizado!");
+      setQuickAmounts((prev) => ({ ...prev, [goal.id]: 0 }));
       loadGoals();
     } catch (error: any) {
       toast.error("Erro ao atualizar progresso: " + error.message);
     }
   };
 
-  const calculateProgress = (current: number, target: number) => {
-    return Math.min((current / target) * 100, 100);
-  };
+  const shouldShowLimit = Number(plan.max_goals || 0) < 999 && usage.goals_count >= Math.max(Number(plan.max_goals || 0) - 1, 0);
 
-  const getDaysRemaining = (deadline: string | null) => {
-    if (!deadline) return null;
-    const today = new Date();
-    const deadlineDate = new Date(deadline);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
+  const renderGoalCard = (goal: Goal) => {
+    const progress = calculateProgress(goal.current_amount, goal.target_amount);
+    const daysRemaining = getDaysRemaining(goal.deadline);
+    const remainingAmount = Math.max(goal.target_amount - goal.current_amount, 0);
 
-  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
-          <p className="text-muted-foreground">Carregando metas...</p>
+      <div key={goal.id} className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-4">
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-white"
+              style={{ backgroundColor: goal.color }}
+            >
+              {goal.icon}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-xl font-bold text-foreground">{goal.name}</h3>
+                <Badge variant="outline" className="rounded-full">{goal.category || "Outro"}</Badge>
+              </div>
+              {goal.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{goal.description}</p>}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            {!goal.is_completed && (
+              <Button size="icon" variant="ghost" onClick={() => openEditDialog(goal)} className="h-9 w-9 rounded-xl">
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" onClick={() => setGoalToDelete(goal.id)} className="h-9 w-9 rounded-xl text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl bg-primary/10 p-4">
+            <p className="text-sm font-medium text-muted-foreground">Guardado</p>
+            <p className="mt-1 text-2xl font-bold text-primary">{formatCurrency(goal.current_amount)}</p>
+          </div>
+          <div className="rounded-2xl bg-muted/50 p-4">
+            <p className="text-sm font-medium text-muted-foreground">Meta</p>
+            <p className="mt-1 text-2xl font-bold text-foreground">{formatCurrency(goal.target_amount)}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Progresso</span>
+            <span className="font-semibold" style={{ color: goal.color }}>{progress.toFixed(1)}%</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Faltam {formatCurrency(remainingAmount)}</span>
+            <span>{goal.is_completed ? "Concluída" : "Em andamento"}</span>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span>
+              {daysRemaining === null
+                ? "Sem prazo"
+                : daysRemaining >= 0
+                  ? `${daysRemaining} dia${daysRemaining === 1 ? "" : "s"} restante${daysRemaining === 1 ? "" : "s"}`
+                  : "Prazo expirado"}
+            </span>
+          </div>
+          {goal.is_completed && goal.completed_at && (
+            <div className="flex items-center gap-2 text-emerald-600">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Concluída em {new Date(goal.completed_at).toLocaleDateString("pt-BR")}</span>
+            </div>
+          )}
+        </div>
+
+        {!goal.is_completed && (
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <CurrencyInput
+              value={quickAmounts[goal.id] || 0}
+              onChange={(value) => setQuickAmounts((prev) => ({ ...prev, [goal.id]: value }))}
+              placeholder="Adicionar valor"
+              className="h-11 rounded-2xl"
+            />
+            <Button
+              onClick={() => handleUpdateProgress(goal, quickAmounts[goal.id] || 0)}
+              className="h-11 rounded-2xl px-6 font-semibold"
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
+        )}
       </div>
     );
-  }
-
-  const activeGoals = goals.filter(g => !g.is_completed);
-  const completedGoals = goals.filter(g => g.is_completed);
+  };
 
   return (
-    <AppLayout title="Minhas Metas">
-      <div className="space-y-6">
-        {/* Limit Warning */}
-        <LimitWarning 
-          resource="metas" 
-          current={usage.goals_count} 
-          max={plan.max_goals} 
-        />
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Target className="h-6 w-6 text-primary" />
-              Minhas Metas
-            </h1>
-            <p className="text-muted-foreground">
-              Defina e acompanhe seus objetivos financeiros
-            </p>
+    <AppLayout title="Metas">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Target className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-normal text-foreground">Metas</h1>
+              <p className="text-lg text-muted-foreground">Acompanhe objetivos financeiros e evolução do dinheiro guardado</p>
+            </div>
           </div>
-          <Button onClick={openCreateDialog} className="bg-gradient-to-r from-primary to-primary-glow shrink-0">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={openCreateDialog} className="h-12 rounded-2xl px-8 text-base font-bold">
+            <Plus className="mr-2 h-5 w-5" />
             Nova Meta
           </Button>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-l-4 border-l-primary">
-            <CardHeader className="pb-2">
-              <CardDescription>Metas Ativas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{activeGoals.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-success">
-            <CardHeader className="pb-2">
-              <CardDescription>Concluídas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-success">{completedGoals.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-info">
-            <CardHeader className="pb-2">
-              <CardDescription>Total Economizado</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-info">
-                R$ {goals.reduce((sum, g) => sum + g.current_amount, 0).toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
+        {shouldShowLimit && (
+          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-bold text-foreground">Limite de metas</p>
+                <p className="text-sm text-muted-foreground">
+                  Você está usando {usage.goals_count} de {plan.max_goals} metas.
+                </p>
+              </div>
+              <Button variant="outline" className="rounded-2xl" onClick={() => navigate("/upgrade")}>
+                Fazer Upgrade
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <GoalKpi title="Metas Ativas" value={String(allActiveGoals.length)} description="Objetivos em andamento" icon={Target} />
+          <GoalKpi title="Concluídas" value={String(allCompletedGoals.length)} description="Objetivos alcançados" icon={CheckCircle2} tone="success" />
+          <GoalKpi title="Total Guardado" value={formatCurrency(totalSaved)} description={`${globalProgress.toFixed(1)}% do alvo total`} icon={Wallet} tone="success" />
+          <GoalKpi title="Valor Alvo" value={formatCurrency(totalTarget)} description="Soma de todas as metas" icon={TrendingUp} />
         </div>
 
-        {/* Active Goals */}
-        {activeGoals.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Metas em Andamento</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {activeGoals.map((goal) => {
-                const progress = calculateProgress(goal.current_amount, goal.target_amount);
-                const daysRemaining = getDaysRemaining(goal.deadline);
-                
-                return (
-                  <Card key={goal.id} className="hover:shadow-lg transition-all" style={{ borderLeftColor: goal.color, borderLeftWidth: 4 }}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl">{goal.icon}</div>
-                          <div>
-                            <CardTitle className="text-xl">{goal.name}</CardTitle>
-                            {goal.description && (
-                              <CardDescription className="mt-1">{goal.description}</CardDescription>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(goal)} className="h-8 w-8">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setGoalToDelete(goal.id)} className="h-8 w-8 text-danger">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-semibold">Progresso</span>
-                          <span className="font-bold" style={{ color: goal.color }}>
-                            {progress.toFixed(0)}%
-                          </span>
-                        </div>
-                        <Progress value={progress} className="h-3" style={{ backgroundColor: `${goal.color}20` }} />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>R$ {goal.current_amount.toFixed(2)}</span>
-                          <span>R$ {goal.target_amount.toFixed(2)}</span>
-                        </div>
-                      </div>
+        <div className="relative max-w-xl">
+          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Buscar metas..."
+            className="h-14 rounded-2xl border-border/80 bg-card pl-14 text-base shadow-sm"
+          />
+        </div>
 
-                      {/* Deadline */}
-                      {daysRemaining !== null && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="h-4 w-4" />
-                          <span className={daysRemaining < 30 ? "text-danger font-semibold" : "text-muted-foreground"}>
-                            {daysRemaining > 0 ? `${daysRemaining} dias restantes` : "Prazo expirado"}
-                          </span>
-                        </div>
-                      )}
+        {loading ? (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-72 rounded-2xl" />
+            ))}
+          </div>
+        ) : goals.length === 0 ? (
+          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/60 px-6 text-center">
+            <Target className="mb-5 h-16 w-16 text-muted-foreground/60" />
+            <h2 className="text-2xl font-bold text-foreground">Nenhuma meta criada ainda</h2>
+            <p className="mt-2 max-w-md text-lg text-muted-foreground">
+              Crie sua primeira meta e acompanhe cada avanço até chegar no objetivo.
+            </p>
+            <Button onClick={openCreateDialog} className="mt-6 h-12 rounded-2xl px-8 text-base font-bold">
+              <Plus className="mr-2 h-5 w-5" />
+              Criar Primeira Meta
+            </Button>
+          </div>
+        ) : filteredGoals.length === 0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-border/80 bg-card px-6 text-center shadow-sm">
+            <Search className="mb-4 h-12 w-12 text-muted-foreground/60" />
+            <h2 className="text-xl font-bold text-foreground">Nenhuma meta encontrada</h2>
+            <p className="mt-2 text-muted-foreground">Tente buscar por outro nome, categoria ou descrição.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {activeGoals.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-foreground">Metas em Andamento</h2>
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  {activeGoals.map(renderGoalCard)}
+                </div>
+              </section>
+            )}
 
-                      {/* Quick Update */}
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Adicionar valor"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const input = e.currentTarget;
-                              const addValue = parseFloat(input.value);
-                              if (!isNaN(addValue) && addValue > 0) {
-                                handleUpdateProgress(goal, goal.current_amount + addValue);
-                                input.value = "";
-                              }
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        <Button
-                          size="icon"
-                          style={{ backgroundColor: goal.color }}
-                          onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                            const addValue = parseFloat(input.value);
-                            if (!isNaN(addValue) && addValue > 0) {
-                              handleUpdateProgress(goal, goal.current_amount + addValue);
-                              input.value = "";
-                            }
-                          }}
-                        >
-                          <TrendingUp className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            {completedGoals.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-foreground">Metas Concluídas</h2>
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  {completedGoals.map(renderGoalCard)}
+                </div>
+              </section>
+            )}
           </div>
         )}
+      </div>
 
-        {/* Completed Goals */}
-        {completedGoals.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-success" />
-              Metas Concluídas
-            </h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {completedGoals.map((goal) => (
-                <Card key={goal.id} className="bg-success/5 border-success/20">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">{goal.icon}</div>
-                        <div>
-                          <CardTitle className="text-xl flex items-center gap-2">
-                            {goal.name}
-                            <CheckCircle2 className="h-5 w-5 text-success" />
-                          </CardTitle>
-                          <CardDescription className="text-success">
-                            Concluída em {new Date(goal.completed_at!).toLocaleDateString("pt-BR")}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => setGoalToDelete(goal.id)} className="h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-success">
-                      R$ {goal.current_amount.toFixed(2)}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {goals.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Nenhuma meta criada ainda</h3>
-              <p className="text-muted-foreground mb-6">
-                Crie sua primeira meta e comece a alcançar seus objetivos financeiros!
-              </p>
-              <Button onClick={openCreateDialog} className="bg-gradient-to-r from-primary to-primary-glow">
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Primeira Meta
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      
-
-      {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
             <DialogDescription>
-              {editingGoal ? "Atualize as informações da sua meta" : "Crie uma nova meta financeira personalizada"}
+              {editingGoal ? "Atualize os dados da sua meta." : "Crie uma meta financeira personalizada."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Meta *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Viagem para Europa"
-                maxLength={100}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {goalCategories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
+          <div className="space-y-5 py-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="target_amount">Valor Meta (R$) *</Label>
+                <Label htmlFor="name">Nome da Meta *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                  placeholder="Ex: Viagem, entrada da casa..."
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger id="category" className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {goalCategories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="target_amount">Valor da Meta *</Label>
                 <CurrencyInput
                   id="target_amount"
                   value={formData.target_amount}
@@ -538,7 +600,7 @@ const Goals = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="current_amount">Valor Atual (R$)</Label>
+                <Label htmlFor="current_amount">Valor Atual</Label>
                 <CurrencyInput
                   id="current_amount"
                   value={formData.current_amount}
@@ -547,50 +609,54 @@ const Goals = () => {
                 />
               </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="deadline">Prazo (opcional)</Label>
+              <Label htmlFor="deadline">Prazo</Label>
               <Input
                 id="deadline"
                 type="date"
                 value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, deadline: event.target.value })}
+                className="h-11 rounded-xl"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
+              <Label htmlFor="description">Descrição</Label>
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descreva sua meta..."
+                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                placeholder="Anotações sobre esta meta..."
                 rows={3}
                 maxLength={500}
               />
               <p className="text-xs text-muted-foreground">{formData.description.length}/500</p>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
+
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving} className="h-11 rounded-2xl">
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={isSaving} className="bg-primary">
+            <Button onClick={handleSave} disabled={isSaving} className="h-11 rounded-2xl font-semibold">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Salvando...
                 </>
+              ) : editingGoal ? (
+                "Atualizar"
               ) : (
-                <>
-                  {editingGoal ? "Atualizar" : "Criar Meta"}
-                </>
+                "Criar Meta"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
+
       <AlertDialog open={!!goalToDelete} onOpenChange={(open) => !open && setGoalToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Meta?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -598,8 +664,8 @@ const Goals = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-danger text-danger-foreground hover:bg-danger/90">
+            <AlertDialogCancel className="rounded-2xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
