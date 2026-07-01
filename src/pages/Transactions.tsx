@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,142 +7,185 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, TrendingUp, TrendingDown, Loader2, User, Building2, Landmark, Wallet, Banknote, CreditCard, ShieldCheck, ShieldOff } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import {
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  Loader2,
+  User,
+  Building2,
+  Banknote,
+  CreditCard,
+  ShieldCheck,
+  ShieldOff,
+  ReceiptText,
+  Landmark,
+} from "lucide-react";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
-import { useBanks, Bank } from "@/hooks/useBanks";
+import { useBanks } from "@/hooks/useBanks";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
+import { TransactionsList } from "@/components/TransactionsList";
 
 interface Category {
   id: string;
   name: string;
   icon: string;
   color: string;
+  profile_type?: "personal" | "business" | null;
 }
+
+const getToday = () => new Date().toISOString().split("T")[0];
+const getCurrentTime = () => new Date().toTimeString().slice(0, 5);
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const formatBalance = (value: unknown) =>
+  Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const Transactions = () => {
   const [searchParams] = useSearchParams();
   const initialProfile = (searchParams.get("profile") as FinancialProfile) || "personal";
-  
+
   const [currentProfile, setCurrentProfile] = useState<FinancialProfile>(initialProfile);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [dataReady, setDataReady] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [listVersion, setListVersion] = useState(0);
   const { canUseBusinessProfile } = useUserPlan();
-  const { banks, allBanks, loadBanks, loadAllBanks } = useBanks(currentProfile);
+  const { banks, loadBanks, loadAllBanks } = useBanks(currentProfile);
   const [formData, setFormData] = useState({
-    amount: "",
+    amount: 0,
     type: "expense" as "income" | "expense",
     categoryId: "",
     description: "",
-    date: new Date().toISOString().split("T")[0],
-    time: new Date().toTimeString().slice(0, 5),
-    profileType: initialProfile as "personal" | "business",
-    bankId: "" as string,
+    date: getToday(),
+    time: getCurrentTime(),
+    paymentMethod: "pix",
+    bankId: "",
     isEssential: null as boolean | null,
   });
+
+  const visibleCategories = useMemo(() => {
+    return categories.filter((category) => !category.profile_type || category.profile_type === currentProfile);
+  }, [categories, currentProfile]);
 
   useEffect(() => {
     loadCategories();
   }, []);
 
   useEffect(() => {
-    setFormData(prev => ({ ...prev, profileType: currentProfile }));
-  }, [currentProfile]);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: visibleCategories.some((category) => category.id === prev.categoryId)
+        ? prev.categoryId
+        : visibleCategories[0]?.id || "",
+      paymentMethod: "pix",
+      bankId: "",
+      isEssential: prev.type === "income" ? null : prev.isEssential,
+    }));
+  }, [currentProfile, visibleCategories]);
 
   const loadCategories = async () => {
-    const { data } = await supabase
-      .from("categories")
-      .select("*")
-      .order("name");
-    
-    if (data) {
-      setCategories(data);
-      if (data.length > 0) {
-        setFormData(prev => ({ ...prev, categoryId: data[0].id }));
-      }
-      setDataReady(true);
+    setCategoriesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setCategories((data as Category[]) || []);
+    } catch (error: any) {
+      toast.error("Erro ao carregar categorias: " + error.message);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const parsedAmount = parseFloat(formData.amount.replace(/\./g, '').replace(',', '.'));
-    if (!formData.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+
+    const amount = Number(formData.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Por favor, insira um valor válido");
       return;
     }
 
-    const selectedCategory = categories.find(c => c.id === formData.categoryId);
-    const isNaoSeiCategory = selectedCategory?.name?.toLowerCase().trim() === "não sei";
-    
+    const selectedCategory = visibleCategories.find((category) => category.id === formData.categoryId);
+    const isNaoSeiCategory = normalizeText(selectedCategory?.name || "") === "nao sei";
+
     if (formData.type === "expense" && formData.isEssential === null && !isNaoSeiCategory) {
-      toast.error("Por favor, marque se a transação é essencial ou não essencial");
+      toast.error("Marque se a transação é essencial ou não essencial");
       return;
     }
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      const amount = parsedAmount;
-      // Set bank_id to null for non-bank payment methods (pix, cash, card)
-      const isNonBankPayment = !formData.bankId || formData.bankId === "pix" || formData.bankId === "cash" || formData.bankId === "card";
-      const selectedBankId = isNonBankPayment ? null : formData.bankId;
+      const selectedBankId = formData.paymentMethod === "bank" ? formData.bankId || null : null;
 
-      // Insert the transaction
-      const { error } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: user.id,
-          amount,
-          type: formData.type,
-          category_id: formData.categoryId || null,
-          description: formData.description || null,
-          date: formData.date,
-          transaction_time: formData.time || null,
-          profile_type: formData.profileType,
-          bank_id: selectedBankId,
-          is_essential: formData.isEssential,
-        });
+      const { error } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        amount,
+        type: formData.type,
+        category_id: formData.categoryId || null,
+        description: formData.description.trim() || null,
+        date: formData.date,
+        transaction_time: formData.time || null,
+        profile_type: currentProfile,
+        bank_id: selectedBankId,
+        is_essential: formData.type === "expense" ? formData.isEssential : null,
+      });
 
       if (error) throw error;
 
-      // Update bank balance only if a real bank was selected (not pix, cash, or card)
       if (selectedBankId) {
-        const selectedBank = allBanks.find(b => b.id === selectedBankId);
+        const selectedBank = banks.find((bank) => bank.id === selectedBankId);
         if (selectedBank) {
+          const currentBalance = Number(selectedBank.current_balance || 0);
           const balanceChange = formData.type === "income" ? amount : -amount;
-          const newBalance = selectedBank.current_balance + balanceChange;
-          
-          await supabase
+
+          const { error: bankError } = await supabase
             .from("banks")
-            .update({ current_balance: newBalance })
+            .update({ current_balance: currentBalance + balanceChange })
             .eq("id", selectedBankId);
+
+          if (bankError) throw bankError;
         }
       }
 
-      const profileLabel = formData.profileType === "personal" ? "pessoal" : "empresarial";
+      const profileLabel = currentProfile === "personal" ? "pessoal" : "empresarial";
       toast.success(`Transação ${profileLabel} registrada com sucesso!`);
-      
-      // Reload all banks to get updated balances
+
       await Promise.all([loadBanks(), loadAllBanks()]);
-      
-      // Reset form to allow adding more transactions
+      setListVersion((version) => version + 1);
+
       setFormData({
-        amount: "",
+        amount: 0,
         type: "expense",
-        categoryId: categories[0]?.id || "",
+        categoryId: visibleCategories[0]?.id || "",
         description: "",
-        date: new Date().toISOString().split("T")[0],
-        time: new Date().toTimeString().slice(0, 5),
-        profileType: currentProfile,
+        date: getToday(),
+        time: getCurrentTime(),
+        paymentMethod: "pix",
         bankId: "",
         isEssential: null,
       });
@@ -153,85 +196,60 @@ const Transactions = () => {
     }
   };
 
+  const handleProfileChange = (profile: FinancialProfile) => {
+    if (profile === "business" && !canUseBusinessProfile()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setCurrentProfile(profile);
+  };
+
   const isPersonal = currentProfile === "personal";
+  const selectedTone = isPersonal ? "text-primary bg-primary/10" : "text-secondary bg-secondary/10";
 
   return (
-    <AppLayout 
-      showProfileSwitcher 
-      currentProfile={currentProfile} 
-      onProfileChange={(profile) => {
-        if (profile === "business" && !canUseBusinessProfile()) {
-          setShowUpgradeModal(true);
-          return;
-        }
-        setCurrentProfile(profile);
-      }}
-      title="Nova Transação"
+    <AppLayout
+      showProfileSwitcher
+      currentProfile={currentProfile}
+      onProfileChange={handleProfileChange}
+      title="Transações"
     >
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`rounded-full p-4 ${selectedTone}`}>
+              {isPersonal ? <User className="h-7 w-7" /> : <Building2 className="h-7 w-7" />}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Nova Transação {isPersonal ? "Pessoal" : "Empresarial"}</h1>
+              <p className="text-lg text-muted-foreground">
+                Registre entradas, saídas e atualize saldos automaticamente
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Card className="rounded-2xl border-border/80 shadow-sm">
+          <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-full ${isPersonal ? 'bg-primary/10' : 'bg-secondary/10'}`}>
-                {isPersonal ? (
-                  <User className="h-5 w-5 text-primary" />
-                ) : (
-                  <Building2 className="h-5 w-5 text-secondary" />
-                )}
+              <div className="rounded-xl bg-primary/10 p-3 text-primary">
+                <ReceiptText className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Registrar Transação {isPersonal ? 'Pessoal' : 'Empresarial'}</CardTitle>
-                <CardDescription>
-                  Registre suas {isPersonal ? 'entradas e saídas pessoais' : 'movimentações empresariais'}
-                </CardDescription>
+                <CardTitle>Dados da transação</CardTitle>
+                <CardDescription>Preencha os campos principais para registrar a movimentação</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Profile Type Selection */}
-              <div className="space-y-2">
-                <Label>Perfil *</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    type="button"
-                    variant={formData.profileType === "personal" ? "default" : "outline"}
-                    className={formData.profileType === "personal" ? "bg-primary hover:bg-primary/90" : ""}
-                    onClick={() => {
-                      setFormData({ ...formData, profileType: "personal" });
-                      setCurrentProfile("personal");
-                    }}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Pessoal
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.profileType === "business" ? "default" : "outline"}
-                    className={formData.profileType === "business" ? "bg-secondary hover:bg-secondary/90" : ""}
-                    onClick={() => {
-                      if (!canUseBusinessProfile()) {
-                        setShowUpgradeModal(true);
-                        return;
-                      }
-                      setFormData({ ...formData, profileType: "business" });
-                      setCurrentProfile("business");
-                    }}
-                  >
-                    <Building2 className="mr-2 h-4 w-4" />
-                    Empresarial
-                  </Button>
-                </div>
-              </div>
-
-              {/* Type Selection */}
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-12">
+              <div className="space-y-2 lg:col-span-4">
                 <Label>Tipo *</Label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant={formData.type === "income" ? "default" : "outline"}
-                    className={formData.type === "income" ? "bg-success hover:bg-success/90" : ""}
+                    className={formData.type === "income" ? "h-12 bg-success hover:bg-success/90" : "h-12"}
                     onClick={() => setFormData({ ...formData, type: "income", isEssential: null })}
                   >
                     <TrendingUp className="mr-2 h-4 w-4" />
@@ -240,7 +258,7 @@ const Transactions = () => {
                   <Button
                     type="button"
                     variant={formData.type === "expense" ? "default" : "outline"}
-                    className={formData.type === "expense" ? "bg-danger hover:bg-danger/90" : ""}
+                    className={formData.type === "expense" ? "h-12 bg-danger hover:bg-danger/90" : "h-12"}
                     onClick={() => setFormData({ ...formData, type: "expense" })}
                   >
                     <TrendingDown className="mr-2 h-4 w-4" />
@@ -249,71 +267,28 @@ const Transactions = () => {
                 </div>
               </div>
 
-              {/* Essential / Non-Essential - only for expenses */}
-              {formData.type === "expense" && (
-              <div className="space-y-2">
-                <Label>Essencialidade *</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    type="button"
-                    variant={formData.isEssential === true ? "default" : "outline"}
-                    className={formData.isEssential === true ? "bg-info hover:bg-info/90" : ""}
-                    onClick={() => setFormData({ ...formData, isEssential: true })}
-                  >
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Essencial
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.isEssential === false ? "default" : "outline"}
-                    className={formData.isEssential === false ? "bg-warning hover:bg-warning/90" : ""}
-                    onClick={() => setFormData({ ...formData, isEssential: false })}
-                  >
-                    <ShieldOff className="mr-2 h-4 w-4" />
-                    Não Essencial
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {formData.isEssential === null
-                    ? "Selecione se esta transação é essencial ou não essencial"
-                    : formData.isEssential 
-                      ? "Gastos necessários como moradia, alimentação, transporte" 
-                      : "Gastos opcionais como lazer, assinaturas dispensáveis"}
-                </p>
-              </div>
-              )}
-
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label htmlFor="amount">Valor (R$)</Label>
-                <Input
+              <div className="space-y-2 lg:col-span-4">
+                <Label htmlFor="amount">Valor (R$) *</Label>
+                <CurrencyInput
                   id="amount"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
                   value={formData.amount}
-                  onChange={(e) => {
-                    const val = e.target.value.replace('.', ',');
-                    if (/^-?\d*,?\d{0,2}$/.test(val) || val === "" || val === "-") {
-                      setFormData({ ...formData, amount: val });
-                    }
-                  }}
+                  onChange={(value) => setFormData({ ...formData, amount: value })}
+                  className="h-12 text-lg font-semibold"
+                  placeholder="0,00"
                   required
-                  className="text-lg"
                 />
               </div>
 
-              {/* Date and Time */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:col-span-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Data</Label>
+                  <Label htmlFor="date">Data *</Label>
                   <Input
                     id="date"
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     required
-                    className="w-full"
+                    className="h-12"
                   />
                 </div>
                 <div className="space-y-2">
@@ -323,45 +298,75 @@ const Transactions = () => {
                     type="time"
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full"
+                    className="h-12"
                   />
                 </div>
               </div>
 
-              {/* Category */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoria</Label>
-                {dataReady ? (
-                <Select
-                  value={formData.categoryId || undefined}
-                  onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.icon} {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                ) : (
-                  <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-                    Carregando...
+              {formData.type === "expense" && (
+                <div className="space-y-2 lg:col-span-4">
+                  <Label>Essencialidade *</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant={formData.isEssential === true ? "default" : "outline"}
+                      className={formData.isEssential === true ? "h-12 bg-info hover:bg-info/90" : "h-12"}
+                      onClick={() => setFormData({ ...formData, isEssential: true })}
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Essencial
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={formData.isEssential === false ? "default" : "outline"}
+                      className={formData.isEssential === false ? "h-12 bg-warning hover:bg-warning/90" : "h-12"}
+                      onClick={() => setFormData({ ...formData, isEssential: false })}
+                    >
+                      <ShieldOff className="mr-2 h-4 w-4" />
+                      Não Essencial
+                    </Button>
                   </div>
+                </div>
+              )}
+
+              <div className="space-y-2 lg:col-span-4">
+                <Label htmlFor="category">Categoria</Label>
+                {categoriesLoading ? (
+                  <div className="flex h-12 items-center rounded-md border bg-background px-3 text-sm text-muted-foreground">
+                    Carregando categorias...
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.categoryId || undefined}
+                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                  >
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {visibleCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.icon} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
-              {/* Bank/Payment Method */}
-              <div className="space-y-2">
-                <Label htmlFor="bank">Meio de Pagamento (opcional)</Label>
-              <Select
-                  value={formData.bankId || "pix"}
-                  onValueChange={(value) => setFormData({ ...formData, bankId: value === "pix" ? "" : value })}
+              <div className="space-y-2 lg:col-span-4">
+                <Label htmlFor="bank">Meio de pagamento</Label>
+                <Select
+                  value={formData.paymentMethod === "bank" ? formData.bankId : formData.paymentMethod}
+                  onValueChange={(value) => {
+                    if (["pix", "cash", "card"].includes(value)) {
+                      setFormData({ ...formData, paymentMethod: value, bankId: "" });
+                      return;
+                    }
+                    setFormData({ ...formData, paymentMethod: "bank", bankId: value });
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12">
                     <SelectValue placeholder="Selecione o meio de pagamento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -383,61 +388,69 @@ const Transactions = () => {
                         Cartão
                       </div>
                     </SelectItem>
-                    {allBanks.filter(b => b.is_active).map((bank) => (
+                    {banks.filter((bank) => bank.is_active).map((bank) => (
                       <SelectItem key={bank.id} value={bank.id}>
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: bank.color }}
-                          />
-                          {bank.name}
-                          <span className="text-muted-foreground text-xs ml-2">
-                            R$ {bank.current_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <Landmark className="h-4 w-4" style={{ color: bank.color }} />
+                          <span>{bank.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            R$ {formatBalance(bank.current_balance)}
                           </span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Se selecionar um banco, o saldo será atualizado automaticamente
-                </p>
               </div>
 
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição (opcional)</Label>
+              <div className="space-y-2 lg:col-span-8">
+                <Label htmlFor="description">Descrição</Label>
                 <Textarea
                   id="description"
                   placeholder="Detalhes sobre a transação..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
+                  className="resize-none"
                 />
               </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit" 
-                className={`w-full h-12 ${isPersonal ? 'bg-gradient-to-r from-primary to-primary-glow' : 'bg-gradient-to-r from-secondary to-info'} hover:opacity-90`}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Registrar Transação {isPersonal ? 'Pessoal' : 'Empresarial'}
-                  </>
-                )}
-              </Button>
+              <div className="flex items-end lg:col-span-4">
+                <Button
+                  type="submit"
+                  className={`h-12 w-full rounded-2xl text-base font-bold ${
+                    isPersonal ? "bg-gradient-to-r from-primary to-primary-glow" : "bg-gradient-to-r from-secondary to-info"
+                  } hover:opacity-90`}
+                  disabled={loading || categoriesLoading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Registrar Transação
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
+
+        <Card className="rounded-2xl border-border/80 shadow-sm">
+          <CardHeader>
+            <CardTitle>Últimas transações</CardTitle>
+            <CardDescription>Confira e edite os lançamentos do perfil selecionado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TransactionsList key={`${currentProfile}-${listVersion}`} profileType={currentProfile} />
+          </CardContent>
+        </Card>
       </div>
+
       <UpgradePrompt
         feature="Controle PF/PJ"
         description="O controle separado de perfil Pessoal e Empresarial está disponível no plano Pro Plus."
