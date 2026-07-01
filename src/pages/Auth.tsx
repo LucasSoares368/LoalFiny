@@ -21,6 +21,7 @@ import { Loader2, ArrowLeft, Shield, TrendingUp, Wallet, CheckCircle2 } from "lu
 import PasswordInput from "@/components/auth/PasswordInput";
 import Captcha from "@/components/auth/Captcha";
 import { motion, AnimatePresence } from "framer-motion";
+import { APP_RESET_PASSWORD_URL } from "@/lib/app-url";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -164,7 +165,7 @@ const Auth = () => {
     setIsResetting(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.href.split('#')[0]}#/reset-password`,
+        redirectTo: APP_RESET_PASSWORD_URL,
       });
 
       if (error) {

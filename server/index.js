@@ -25,6 +25,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "";
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://app.localfiny.com";
 const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads"));
 const smtpPort = Number(process.env.SMTP_PORT || 587);
 
@@ -633,7 +634,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
         "update users set reset_token_hash = ?, reset_token_expires_at = date_add(now(), interval 1 hour) where id = ?",
         [tokenHash, user.id],
       );
-      const baseUrl = redirectTo || `${PUBLIC_BASE_URL}/login?type=recovery`;
+      const baseUrl = redirectTo || `${APP_BASE_URL}/#/reset-password`;
       const resetUrl = new URL(baseUrl);
       resetUrl.searchParams.set("type", "recovery");
       resetUrl.searchParams.set("token", token);

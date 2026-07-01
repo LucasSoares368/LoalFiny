@@ -16,6 +16,12 @@ const ResetPassword = () => {
   const [sessionActive, setSessionActive] = useState(false);
 
   useEffect(() => {
+    const token = getRecoveryToken();
+    if (token) {
+      setSessionActive(true);
+      return;
+    }
+
     // We need to ensure there's a recovery session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -49,7 +55,7 @@ const ResetPassword = () => {
         toast.error(error.message);
       } else {
         toast.success("Senha atualizada com sucesso!");
-        setTimeout(() => navigate("/dashboard"), 1500);
+        setTimeout(() => navigate(getRecoveryToken() ? "/auth" : "/dashboard"), 1500);
       }
     } catch (error: any) {
       toast.error("Erro ao atualizar senha: " + error.message);
@@ -116,5 +122,15 @@ const ResetPassword = () => {
     </div>
   );
 };
+
+function getRecoveryToken() {
+  const searchToken = new URLSearchParams(window.location.search).get("token");
+  if (searchToken) return searchToken;
+
+  const hash = window.location.hash || "";
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex === -1) return null;
+  return new URLSearchParams(hash.slice(queryIndex + 1)).get("token");
+}
 
 export default ResetPassword;

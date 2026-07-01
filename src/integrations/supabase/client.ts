@@ -38,6 +38,16 @@ function setStoredSession(session: AuthSession | null) {
   }
 }
 
+function getRecoveryToken() {
+  const searchToken = new URLSearchParams(window.location.search).get("token");
+  if (searchToken) return searchToken;
+
+  const hash = window.location.hash || "";
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex === -1) return null;
+  return new URLSearchParams(hash.slice(queryIndex + 1)).get("token");
+}
+
 async function apiFetch(path: string, options: RequestInit = {}) {
   const session = getStoredSession();
   const headers = new Headers(options.headers);
@@ -309,7 +319,7 @@ export const supabase = {
 
     async updateUser(updates: { password?: string }) {
       if (!updates.password) return { data: null, error: null };
-      const token = new URLSearchParams(window.location.search).get("token");
+      const token = getRecoveryToken();
       return apiFetch("/auth/update-password", {
         method: "POST",
         body: JSON.stringify({ password: updates.password, token }),
