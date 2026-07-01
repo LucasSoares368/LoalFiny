@@ -85,10 +85,10 @@ export function WhatsAppPhoneDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-green-500" />
+            <MessageCircle className="h-5 w-5 text-primary" />
             Configurar WhatsApp
           </DialogTitle>
           <DialogDescription>
@@ -108,14 +108,14 @@ export function WhatsAppPhoneDialog({
               value={formatPhoneDisplay(phoneNumber)}
               onChange={handlePhoneChange}
               placeholder="(11) 99999-9999"
-              className="text-lg"
+              className="h-12 rounded-2xl text-lg font-semibold"
             />
             <p className="text-xs text-muted-foreground">
               Digite seu número com DDD (ex: 11999999999)
             </p>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+          <div className="flex items-center justify-between rounded-2xl bg-muted/50 p-4">
             <div className="space-y-0.5">
               <Label htmlFor="notifications" className="font-medium">
                 Receber notificações
@@ -131,18 +131,18 @@ export function WhatsAppPhoneDialog({
             />
           </div>
 
-          <div className="bg-success/10 p-4 rounded-lg border border-success/20">
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm text-foreground">
-              <span className="font-semibold text-success">Como funciona:</span> Você receberá mensagens do LocalFiny 
+              <span className="font-semibold text-primary">Como funciona:</span> Você receberá mensagens do LocalFiny
               diretamente no seu WhatsApp com lembretes de contas a pagar e resumos 
               financeiros conforme suas configurações.
             </p>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="h-12 w-full rounded-2xl font-bold" disabled={loading}>
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Salvando...
               </>
             ) : (

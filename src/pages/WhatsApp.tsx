@@ -1,26 +1,23 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { 
+import {
+  Bell,
   Bot,
-  MessageCircle, 
-  Plus, 
-  Settings, 
-  Bell, 
-  Trash2, 
-  Edit2, 
-  Send,
-  CheckCircle,
-  XCircle,
-  Clock,
   Calendar,
+  CheckCircle,
+  Clock,
+  Edit2,
+  MessageCircle,
+  Plus,
+  Send,
   Smartphone,
-  Crown,
-  Lock
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,7 +26,6 @@ import { ReminderFormDialog } from "@/components/whatsapp/ReminderFormDialog";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { UpgradePrompt } from "@/components/plans/UpgradePrompt";
 import { LimitWarning } from "@/components/plans/LimitWarning";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,15 +67,16 @@ interface MessageLog {
 }
 
 const REMINDER_TYPE_LABELS: Record<string, string> = {
-  daily_summary: "Resumo Diário",
-  weekly_summary: "Resumo Semanal",
-  monthly_summary: "Resumo Mensal",
-  bill: "Conta a Pagar",
+  daily_summary: "Resumo diário",
+  weekly_summary: "Resumo semanal",
+  monthly_summary: "Resumo mensal",
+  bill: "Conta a pagar",
   custom: "Personalizado",
-  smart_alerts: "⚡ Alertas Inteligentes",
+  smart_alerts: "Alertas inteligentes",
 };
 
 const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const cardClass = "rounded-2xl border-border/80 bg-card shadow-sm";
 
 export default function WhatsApp() {
   const navigate = useNavigate();
@@ -105,7 +102,7 @@ export default function WhatsApp() {
       setIsRefreshing(true);
       refetchPlan();
     }
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -126,18 +123,12 @@ export default function WhatsApp() {
           .select("id, created_at, message_type, status, error_message, message_content, sent_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(20)
+          .limit(20),
       ]);
 
-      if (profileResult.data) {
-        setProfile(profileResult.data);
-      }
-      if (remindersResult.data) {
-        setReminders(remindersResult.data);
-      }
-      if (logsResult.data) {
-        setMessageLogs(logsResult.data as MessageLog[]);
-      }
+      if (profileResult.data) setProfile(profileResult.data);
+      if (remindersResult.data) setReminders(remindersResult.data);
+      if (logsResult.data) setMessageLogs(logsResult.data as MessageLog[]);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -146,7 +137,7 @@ export default function WhatsApp() {
     }
   };
 
-  const isConnected = profile?.phone_number && profile?.whatsapp_notifications_enabled;
+  const isConnected = Boolean(profile?.phone_number && profile?.whatsapp_notifications_enabled);
 
   const handleToggleReminder = async (reminderId: string, isActive: boolean) => {
     try {
@@ -157,10 +148,10 @@ export default function WhatsApp() {
 
       if (error) throw error;
 
-      setReminders(reminders.map(r => 
-        r.id === reminderId ? { ...r, is_active: isActive } : r
+      setReminders(reminders.map((reminder) =>
+        reminder.id === reminderId ? { ...reminder, is_active: isActive } : reminder,
       ));
-      
+
       toast.success(isActive ? "Lembrete ativado" : "Lembrete desativado");
     } catch (error: any) {
       toast.error("Erro ao atualizar: " + error.message);
@@ -178,7 +169,7 @@ export default function WhatsApp() {
 
       if (error) throw error;
 
-      setReminders(reminders.filter(r => r.id !== reminderToDelete));
+      setReminders(reminders.filter((reminder) => reminder.id !== reminderToDelete));
       toast.success("Lembrete excluído");
       refetchPlan();
     } catch (error: any) {
@@ -197,17 +188,17 @@ export default function WhatsApp() {
 
     try {
       setSendingTest(true);
-      
+
       const response = await supabase.functions.invoke("send-whatsapp", {
         body: {
-          message: "🧪 *Teste LocalFiny*\n\nSua integração com WhatsApp está funcionando corretamente!\n\n_Este é um teste automático._",
+          message: "*Teste LocalFiny*\n\nSua integração com WhatsApp está funcionando corretamente.\n\n_Este é um teste automático._",
           messageType: "test",
         },
       });
 
       if (response.error) throw response.error;
 
-      toast.success("Mensagem de teste enviada!");
+      toast.success("Mensagem de teste enviada");
       loadData(true);
     } catch (error: any) {
       toast.error("Erro ao enviar: " + error.message);
@@ -218,42 +209,47 @@ export default function WhatsApp() {
 
   const formatPhoneDisplay = (phone: string) => {
     const digits = phone.replace(/\D/g, "");
-    // Remove country code for display
     const localNumber = digits.startsWith("55") ? digits.slice(2) : digits;
+
     if (localNumber.length === 11) {
       return `(${localNumber.slice(0, 2)}) ${localNumber.slice(2, 7)}-${localNumber.slice(7)}`;
     }
+
     if (localNumber.length === 10) {
       return `(${localNumber.slice(0, 2)}) ${localNumber.slice(2, 6)}-${localNumber.slice(6)}`;
     }
+
     return phone;
   };
 
   const formatSchedule = (reminder: Reminder) => {
     const time = reminder.time_of_day?.slice(0, 5) || "09:00";
-    
+
     if (reminder.reminder_type === "daily_summary") {
       return `Todos os dias às ${time}`;
     }
+
     if (reminder.reminder_type === "weekly_summary" && reminder.day_of_week !== null) {
       return `Toda ${DAYS_OF_WEEK[reminder.day_of_week]} às ${time}`;
     }
+
     if (reminder.reminder_type === "monthly_summary" && reminder.day_of_month) {
       return `Dia ${reminder.day_of_month} de cada mês às ${time}`;
     }
+
     if (reminder.reminder_type === "bill" && reminder.day_of_month) {
-      const daysBeforeText = reminder.days_before > 0 
-        ? ` (${reminder.days_before} dias antes)` 
-        : "";
+      const daysBeforeText = reminder.days_before > 0 ? ` (${reminder.days_before} dias antes)` : "";
       return `Dia ${reminder.day_of_month}${daysBeforeText} às ${time}`;
     }
-    // Smart alerts and custom: check for day_of_week, day_of_month, or treat as daily
+
     if (reminder.day_of_week !== null) {
       return `Toda ${DAYS_OF_WEEK[reminder.day_of_week]} às ${time}`;
     }
+
     if (reminder.day_of_month) {
       return `Dia ${reminder.day_of_month} de cada mês às ${time}`;
     }
+
     return `Todos os dias às ${time}`;
   };
 
@@ -263,26 +259,51 @@ export default function WhatsApp() {
       navigate("/upgrade");
       return;
     }
+
     setSelectedReminder(null);
     setReminderDialogOpen(true);
   };
 
-  // If WhatsApp is not enabled for this plan, show upgrade prompt (only after plan loaded)
+  const Header = () => (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <MessageCircle className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
+            WhatsApp
+          </h1>
+          <p className="mt-1 max-w-2xl text-lg text-muted-foreground">
+            Receba lembretes, alertas e resumos financeiros direto no seu WhatsApp.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          variant="outline"
+          className="h-12 rounded-2xl px-5 font-semibold"
+          onClick={() => setPhoneDialogOpen(true)}
+        >
+          <Smartphone className="mr-2 h-4 w-4" />
+          {isConnected ? "Alterar número" : "Configurar"}
+        </Button>
+        <Button className="h-12 rounded-2xl px-5 font-bold" onClick={handleOpenNewReminder}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo lembrete
+        </Button>
+      </div>
+    </div>
+  );
+
   if (!planLoading && !canUseWhatsApp()) {
     return (
-      <AppLayout>
-        <div className="mx-auto w-full max-w-3xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              Assistente Virtual
-            </h1>
-            <p className="text-muted-foreground">
-              Receba lembretes e resumos financeiros no seu WhatsApp
-            </p>
-          </div>
-          
-          <UpgradePrompt 
+      <AppLayout title="WhatsApp">
+        <div className="mx-auto max-w-3xl space-y-8">
+          <Header />
+
+          <UpgradePrompt
             feature="Assistente Virtual WhatsApp"
             description="Receba resumos financeiros diários, semanais e mensais diretamente no seu WhatsApp. Configure lembretes para contas a pagar e nunca mais esqueça um vencimento."
             requiredPlan="pro"
@@ -293,129 +314,127 @@ export default function WhatsApp() {
   }
 
   return (
-    <AppLayout>
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-        {/* Limit Warning */}
+    <AppLayout title="WhatsApp">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <Header />
+
         {plan.plan_type === "pro" && (
-          <LimitWarning 
-            resource="lembretes" 
-            current={usage.reminders_count} 
+          <LimitWarning
+            resource="lembretes"
+            current={usage.reminders_count}
             max={plan.max_reminders}
-            alwaysShow={true}
+            alwaysShow
           />
         )}
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              Assistente Virtual
-            </h1>
-            <p className="text-muted-foreground">
-              Receba lembretes e resumos financeiros no seu WhatsApp
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setPhoneDialogOpen(true)}
-            >
-              <Smartphone className="h-4 w-4 mr-2" />
-              {isConnected ? "Alterar número" : "Configurar"}
-            </Button>
-            <Button onClick={handleOpenNewReminder}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Lembrete
-            </Button>
-          </div>
-        </div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <Card className={cardClass}>
+            <CardHeader>
+              <CardTitle className="text-xl">Status da conexão</CardTitle>
+              <CardDescription>Confira se o WhatsApp está pronto para receber mensagens.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  {isConnected ? (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
+                      <CheckCircle className="h-7 w-7" />
+                    </div>
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <XCircle className="h-7 w-7" />
+                    </div>
+                  )}
 
-        {/* Status Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Status da Conexão</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isConnected ? (
-                  <>
-                    <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Conectado</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatPhoneDisplay(profile?.phone_number || "")}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                      <XCircle className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Não conectado</p>
-                      <p className="text-sm text-muted-foreground">
-                        Configure seu número para receber mensagens
-                      </p>
-                    </div>
-                  </>
+                  <div>
+                    <p className="text-lg font-bold">{isConnected ? "Conectado" : "Não conectado"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isConnected
+                        ? formatPhoneDisplay(profile?.phone_number || "")
+                        : "Configure seu número para receber mensagens"}
+                    </p>
+                  </div>
+                </div>
+
+                {isConnected && (
+                  <Button
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={handleSendTestMessage}
+                    disabled={sendingTest || isRefreshing}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {sendingTest ? "Enviando..." : "Testar"}
+                  </Button>
                 )}
               </div>
-              {isConnected && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleSendTestMessage}
-                  disabled={sendingTest}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {sendingTest ? "Enviando..." : "Testar"}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Reminders List */}
-        <Card>
+          <Card className={cardClass}>
+            <CardContent className="p-6">
+              <div className="flex gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="mb-2 text-lg font-bold">Como funciona?</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>Informe seu número de WhatsApp para receber mensagens.</p>
+                    <p>Crie lembretes para contas a pagar e resumos financeiros.</p>
+                    <p>As mensagens chegam automaticamente no horário configurado.</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className={cardClass}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Lembretes Configurados
-            </CardTitle>
-            <CardDescription>
-              Seus lembretes automáticos por WhatsApp
-            </CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Bell className="h-5 w-5 text-primary" />
+                  Lembretes configurados
+                </CardTitle>
+                <CardDescription>Seus lembretes automáticos por WhatsApp.</CardDescription>
+              </div>
+              <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
+                {reminders.length} {reminders.length === 1 ? "lembrete" : "lembretes"}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            {reminders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhum lembrete configurado</p>
-                <p className="text-sm">Crie seu primeiro lembrete para receber alertas</p>
+            {loading ? (
+              <div className="py-12 text-center text-muted-foreground">Carregando lembretes...</div>
+            ) : reminders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 px-6 py-14 text-center">
+                <Bell className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                <p className="text-lg font-bold text-foreground">Nenhum lembrete configurado</p>
+                <p className="mt-1 text-muted-foreground">Crie seu primeiro lembrete para receber alertas.</p>
+                <Button className="mt-5 h-12 rounded-2xl px-6 font-bold" onClick={handleOpenNewReminder}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar lembrete
+                </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-4 xl:grid-cols-2">
                 {reminders.map((reminder) => (
                   <div
                     key={reminder.id}
-                    className={`p-4 border rounded-lg transition-opacity ${
-                      !reminder.is_active ? "opacity-50" : ""
+                    className={`rounded-2xl border bg-background p-5 shadow-sm transition-opacity ${
+                      !reminder.is_active ? "opacity-55" : ""
                     }`}
                   >
-                    {/* Header row: title + actions */}
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium leading-tight">{reminder.title}</h4>
-                        <Badge variant="secondary" className="text-xs mt-1">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate text-lg font-bold leading-tight">{reminder.title}</h4>
+                        <Badge variant="secondary" className="mt-2 rounded-full text-xs">
                           {REMINDER_TYPE_LABELS[reminder.reminder_type] || reminder.reminder_type}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex shrink-0 items-center gap-1">
                         <Switch
                           checked={reminder.is_active}
                           onCheckedChange={(checked) => handleToggleReminder(reminder.id, checked)}
@@ -423,7 +442,7 @@ export default function WhatsApp() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8"
+                          className="h-9 w-9 rounded-full"
                           onClick={() => {
                             setSelectedReminder(reminder);
                             setReminderDialogOpen(true);
@@ -434,7 +453,7 @@ export default function WhatsApp() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-9 w-9 rounded-full text-destructive hover:text-destructive"
                           onClick={() => {
                             setReminderToDelete(reminder.id);
                             setDeleteDialogOpen(true);
@@ -444,16 +463,15 @@ export default function WhatsApp() {
                         </Button>
                       </div>
                     </div>
-                    
-                    {/* Info row: schedule + last sent */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 flex-shrink-0" />
+
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 shrink-0 text-primary" />
                         <span className="truncate">{formatSchedule(reminder)}</span>
                       </span>
                       {reminder.last_sent_at && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 flex-shrink-0" />
+                        <span className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 shrink-0 text-primary" />
                           <span className="truncate">
                             Último: {new Date(reminder.last_sent_at).toLocaleDateString("pt-BR")}{" "}
                             {new Date(reminder.last_sent_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -468,39 +486,38 @@ export default function WhatsApp() {
           </CardContent>
         </Card>
 
-        {/* Message Logs */}
-        <Card>
+        <Card className={cardClass}>
           <CardHeader>
-            <CardTitle>Histórico de envios</CardTitle>
-            <CardDescription>
-              Últimas mensagens enviadas para seu WhatsApp
-            </CardDescription>
+            <CardTitle className="text-xl">Histórico de envios</CardTitle>
+            <CardDescription>Últimas mensagens enviadas para seu WhatsApp.</CardDescription>
           </CardHeader>
           <CardContent>
             {messageLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum envio registrado ainda.</p>
+              <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                Nenhum envio registrado ainda.
+              </div>
             ) : (
               <div className="space-y-3">
                 {messageLogs.map((log) => (
-                  <div key={log.id} className="rounded-lg border p-3">
-                    <div className="flex flex-wrap items-center gap-2 justify-between">
+                  <div key={log.id} className="rounded-2xl border bg-background p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm text-muted-foreground">
                         {new Date(log.created_at).toLocaleString("pt-BR")}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="rounded-full text-xs">
                           {log.message_type}
                         </Badge>
-                        <Badge variant={log.status === "sent" ? "default" : "outline"} className="text-xs">
+                        <Badge variant={log.status === "sent" ? "default" : "outline"} className="rounded-full text-xs">
                           {log.status || "unknown"}
                         </Badge>
                       </div>
                     </div>
-                    <div className="mt-2 text-sm whitespace-pre-wrap break-words">
+                    <div className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">
                       {log.message_content}
                     </div>
                     {log.error_message && (
-                      <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                      <p className="mt-3 whitespace-pre-wrap rounded-xl bg-destructive/10 p-3 text-xs text-destructive">
                         Erro: {log.error_message}
                       </p>
                     )}
@@ -510,30 +527,8 @@ export default function WhatsApp() {
             )}
           </CardContent>
         </Card>
-
-        {/* Info Card */}
-
-        {/* Info Card */}
-        <Card className="bg-muted/30">
-          <CardContent className="pt-6">
-            <div className="flex gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <MessageCircle className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium mb-1">Como funciona?</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Informe seu número de WhatsApp para receber mensagens</li>
-                  <li>• Crie lembretes para contas a pagar e resumos financeiros</li>
-                  <li>• Receba as mensagens automaticamente no horário configurado</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Dialogs */}
       <WhatsAppPhoneDialog
         open={phoneDialogOpen}
         onOpenChange={setPhoneDialogOpen}
@@ -550,7 +545,7 @@ export default function WhatsApp() {
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lembrete?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -558,8 +553,11 @@ export default function WhatsApp() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteReminder} className="bg-destructive text-destructive-foreground">
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteReminder}
+              className="rounded-xl bg-destructive text-destructive-foreground"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

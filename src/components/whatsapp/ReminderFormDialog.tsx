@@ -36,7 +36,7 @@ const REMINDER_TYPES = [
   { value: "monthly_summary", label: "Resumo Mensal", description: "Relatório completo do mês" },
   { value: "bill", label: "Conta a Pagar", description: "Lembrete de vencimento" },
   { value: "custom", label: "Lembrete Personalizado", description: "Mensagem customizada" },
-  { value: "smart_alerts", label: "⚡ Alertas Inteligentes", description: "Receba todos os alertas baseados nos seus dados reais" },
+  { value: "smart_alerts", label: "Alertas Inteligentes", description: "Receba todos os alertas baseados nos seus dados reais" },
 ];
 
 const SMART_ALERT_DETAILS = [
@@ -249,7 +249,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isSmartAlert ? <Zap className="h-5 w-5 text-primary" /> : <Bell className="h-5 w-5" />}
@@ -267,7 +267,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
           <div className="space-y-2">
             <Label>Tipo</Label>
             <Select value={formData.reminder_type} onValueChange={handleTypeChange}>
-              <SelectTrigger>
+              <SelectTrigger className="h-12 rounded-2xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -282,7 +282,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
 
           {/* Description for smart alerts */}
           {isSmartAlert && (
-            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+            <div className="space-y-2 rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <p className="text-sm font-medium">Você receberá alertas automáticos sobre:</p>
               <ul className="space-y-1">
                 {SMART_ALERT_DETAILS.map((alert) => (
@@ -300,7 +300,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
             <div className="space-y-2">
               <Label>Selecionar Dívida</Label>
               <Select value={formData.reference_id} onValueChange={handleDebtSelect}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl">
                   <SelectValue placeholder="Escolha uma dívida" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,6 +323,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ex: Pagar aluguel"
+                className="h-12 rounded-2xl"
                 required
               />
             </div>
@@ -337,6 +338,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="Mensagem personalizada..."
+                className="rounded-2xl"
                 rows={3}
               />
             </div>
@@ -351,7 +353,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.schedule}
                 onValueChange={(value) => setFormData({ ...formData, schedule: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +372,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                     value={formData.day_of_week || "1"}
                     onValueChange={(value) => setFormData({ ...formData, day_of_week: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 rounded-2xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -394,12 +396,13 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                     max="28"
                     value={formData.day_of_month || "1"}
                     onChange={(e) => setFormData({ ...formData, day_of_month: e.target.value })}
+                    className="h-12 rounded-2xl"
                   />
                 </div>
               )}
             </div>
           ) : formData.reminder_type === "daily_summary" ? (
-            <div className="p-3 bg-muted/50 rounded-lg">
+            <div className="rounded-2xl bg-muted/50 p-4">
               <p className="text-sm text-muted-foreground">
                 Você receberá um resumo financeiro completo todos os dias no horário configurado abaixo.
               </p>
@@ -411,7 +414,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.day_of_week}
                 onValueChange={(value) => setFormData({ ...formData, day_of_week: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl">
                   <SelectValue placeholder="Escolha o dia" />
                 </SelectTrigger>
                 <SelectContent>
@@ -434,6 +437,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.day_of_month}
                 onChange={(e) => setFormData({ ...formData, day_of_month: e.target.value })}
                 placeholder="1-28"
+                className="h-12 rounded-2xl"
               />
             </div>
           ) : formData.reminder_type === "bill" ? (
@@ -447,6 +451,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.day_of_month}
                 onChange={(e) => setFormData({ ...formData, day_of_month: e.target.value })}
                 placeholder="1-31"
+                className="h-12 rounded-2xl"
               />
             </div>
           ) : (
@@ -460,6 +465,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.day_of_month}
                 onChange={(e) => setFormData({ ...formData, day_of_month: e.target.value })}
                 placeholder="1-31"
+                className="h-12 rounded-2xl"
               />
             </div>
           )}
@@ -475,6 +481,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
                 value={formData.days_before}
                 onChange={(e) => setFormData({ ...formData, days_before: e.target.value })}
                 placeholder="0"
+                className="h-12 rounded-2xl"
               />
               <p className="text-xs text-muted-foreground">
                 Quantos dias antes do vencimento você quer ser lembrado
@@ -489,6 +496,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
               type="time"
               value={formData.time_of_day}
               onChange={(e) => setFormData({ ...formData, time_of_day: e.target.value })}
+              className="h-12 rounded-2xl"
             />
           </div>
 
@@ -497,12 +505,12 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, onSuccess }: 
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="h-12 flex-1 rounded-2xl font-semibold"
               disabled={loading}
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="submit" className="h-12 flex-1 rounded-2xl font-bold" disabled={loading}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : reminder ? (
