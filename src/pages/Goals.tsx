@@ -60,6 +60,8 @@ interface Goal {
   completed_at: string | null;
   created_at: string;
   profile_type: "personal" | "business";
+  goal_mode: "transfer" | "expense";
+  destination_bank_id: string | null;
 }
 
 interface Bank {
@@ -77,6 +79,8 @@ const goalSchema = z.object({
   current_amount: z.number().min(0, "Valor não pode ser negativo").max(999999999.99, "Valor muito alto"),
   deadline: z.string().optional(),
   category: z.string().max(50).optional(),
+  goal_mode: z.enum(["transfer", "expense"]),
+  destination_bank_id: z.string().optional(),
 });
 
 const goalCategories = [
@@ -97,6 +101,8 @@ const emptyForm = () => ({
   current_amount: 0,
   deadline: "",
   category: "Outro",
+  goal_mode: "expense" as "transfer" | "expense",
+  destination_bank_id: "",
 });
 
 const toNumber = (value: unknown) => {
@@ -130,6 +136,8 @@ const normalizeGoal = (goal: any): Goal => ({
   is_completed: goal?.is_completed === true || goal?.is_completed === 1,
   completed_at: goal?.completed_at || null,
   profile_type: goal?.profile_type === "business" ? "business" : "personal",
+  goal_mode: goal?.goal_mode === "transfer" ? "transfer" : "expense",
+  destination_bank_id: goal?.destination_bank_id || null,
 });
 
 const calculateProgress = (current: number, target: number) => {
@@ -138,6 +146,7 @@ const calculateProgress = (current: number, target: number) => {
 };
 
 const shouldDefaultGoalToTransfer = (goal: Goal) => {
+  if (goal.goal_mode === "transfer") return true;
   const category = normalizeText(goal.category || "");
   const name = normalizeText(goal.name || "");
   return ["investimento", "emergencia", "reserva"].some((term) => category.includes(term) || name.includes(term));
@@ -327,6 +336,8 @@ const Goals = () => {
       current_amount: goal.current_amount,
       deadline: goal.deadline || "",
       category: goal.category || "Outro",
+      goal_mode: goal.goal_mode || "expense",
+      destination_bank_id: goal.destination_bank_id || "",
     });
     setIsDialogOpen(true);
   };
@@ -340,9 +351,17 @@ const Goals = () => {
         current_amount: formData.current_amount,
         deadline: formData.deadline || undefined,
         category: formData.category,
+        goal_mode: formData.goal_mode,
+        destination_bank_id: formData.destination_bank_id || undefined,
       });
 
       setIsSaving(true);
+
+      if (validatedData.goal_mode === "transfer" && !validatedData.destination_bank_id) {
+        toast.error("Selecione o banco de destino da meta");
+        setIsSaving(false);
+        return;
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
@@ -358,6 +377,8 @@ const Goals = () => {
         category: validatedData.category || "Outro",
         user_id: user.id,
         profile_type: currentProfile,
+        goal_mode: validatedData.goal_mode,
+        destination_bank_id: validatedData.goal_mode === "transfer" ? validatedData.destination_bank_id || null : null,
         color: categoryData?.color || "#ff6a00",
         icon: categoryData?.icon || "M",
         is_completed: isCompleted,
@@ -463,7 +484,7 @@ const Goals = () => {
     setContributionGoal(goal);
     setContributionAmount(0);
     setContributionBankId(onlyBank?.id || "");
-    setContributionDestinationBankId("");
+    setContributionDestinationBankId(defaultMode === "transfer" ? goal.destination_bank_id || "" : "");
     setContributionMode(defaultMode);
     setContributionPaymentMethod(defaultMode === "transfer" ? "goal_transfer" : onlyBank?.account_type === "credit_card" ? "credit_card" : "pix");
     setContributionNotes("");
@@ -830,6 +851,50 @@ const Goals = () => {
                   placeholder="0,00"
                 />
               </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Tipo da Meta *</Label>
+                <Select
+                  value={formData.goal_mode}
+                  onValueChange={(value) => setFormData({
+                    ...formData,
+                    goal_mode: value as "transfer" | "expense",
+                    destination_bank_id: value === "transfer" ? formData.destination_bank_id : "",
+                  })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="transfer">Guardar ou investir</SelectItem>
+                    <SelectItem value="expense">Quitar, pagar ou consumir</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.goal_mode === "transfer" && (
+                <div className="space-y-2">
+                  <Label>Banco de destino *</Label>
+                  <Select
+                    value={formData.destination_bank_id}
+                    onValueChange={(value) => setFormData({ ...formData, destination_bank_id: value })}
+                    disabled={banksLoading}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder={banksLoading ? "Carregando..." : "Selecione onde guardar"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.id}>
+                          {bank.name} - {formatCurrency(bank.current_balance)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
