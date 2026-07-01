@@ -15,12 +15,12 @@ type Message = { role: "user" | "assistant"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_API_URL || "/api"}/functions/ai-chat`;
 
 const suggestedQuestions = [
-  "📊 Faça um resumo financeiro do mês atual",
-  "💰 Qual meu saldo total em todas as contas?",
-  "📉 Quais são minhas maiores despesas este mês?",
-  "🎯 Como estão minhas metas financeiras?",
-  "💳 Qual a situação das minhas dívidas?",
-  "📈 Compare receitas e despesas pessoal vs empresarial",
+  "Faça um resumo financeiro do mês atual",
+  "Qual meu saldo total em todas as contas?",
+  "Quais são minhas maiores despesas este mês?",
+  "Como estão minhas metas financeiras?",
+  "Qual a situação das minhas dívidas?",
+  "Compare receitas e despesas pessoal vs empresarial",
 ];
 
 export default function AiChat() {
@@ -74,7 +74,7 @@ export default function AiChat() {
     const contentType = resp.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const payload = await resp.json();
-      const content = payload?.data?.message || payload?.message || "Assistente IA ainda nao configurado.";
+      const content = payload?.data?.message || payload?.message || "Assistente IA ainda não configurado.";
       setMessages((prev) => [...prev, { role: "assistant", content }]);
       return;
     }
@@ -186,9 +186,9 @@ export default function AiChat() {
     }
   }, [input, isLoading, messages, streamChat]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       handleSend();
     }
   };
@@ -198,21 +198,37 @@ export default function AiChat() {
     toast.success("Conversa limpa");
   };
 
+  const Header = () => (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Sparkles className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-normal text-foreground sm:text-4xl">
+            Assistente IA
+          </h1>
+          <p className="mt-1 max-w-2xl text-lg text-muted-foreground">
+            Converse com a LocalFiny para analisar finanças, metas, dívidas e movimentações.
+          </p>
+        </div>
+      </div>
+
+      {messages.length > 0 && (
+        <Button variant="outline" className="h-12 rounded-2xl px-5 font-semibold" onClick={clearChat}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Limpar conversa
+        </Button>
+      )}
+    </div>
+  );
+
   if (!planLoading && !canUseAI()) {
     return (
       <AppLayout title="Assistente IA">
-        <div className="mx-auto w-full max-w-3xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-primary" />
-              Assistente IA
-            </h1>
-            <p className="text-muted-foreground">
-              Análise financeira inteligente e tira-dúvidas personalizado
-            </p>
-          </div>
-          
-          <UpgradePrompt 
+        <div className="mx-auto max-w-3xl space-y-8">
+          <Header />
+          <UpgradePrompt
             feature="Assistente IA"
             description="Tenha um assistente pessoal para analisar suas finanças, tirar dúvidas e dar dicas personalizadas baseadas nos seus dados reais."
             requiredPlan="pro"
@@ -224,31 +240,34 @@ export default function AiChat() {
 
   return (
     <AppLayout title="Assistente IA">
-      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-4xl flex-col p-4">
-        <div className="flex-1 overflow-hidden rounded-xl border bg-card">
-          <div ref={scrollRef} className="h-full overflow-y-auto">
-            <div className="space-y-4 p-4">
+      <div className="mx-auto flex h-[calc(100vh-5.5rem)] max-w-6xl flex-col gap-6">
+        <Header />
+
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border-border/80 bg-card shadow-sm">
+          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+            <div className="space-y-5 p-5 sm:p-6">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center space-y-6 py-12 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                    <Sparkles className="h-8 w-8 text-primary" />
+                <div className="flex min-h-[460px] flex-col items-center justify-center space-y-7 text-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Sparkles className="h-10 w-10" />
                   </div>
 
                   <div>
-                    <h2 className="mb-2 text-xl font-semibold text-foreground">
+                    <h2 className="mb-2 text-2xl font-bold text-foreground">
                       Assistente Financeiro IA
                     </h2>
-                    <p className="max-w-md text-sm text-muted-foreground">
-                      Pergunte sobre suas finanças! Tenho acesso aos seus dados reais de transações, bancos, dívidas e metas.
+                    <p className="mx-auto max-w-xl text-muted-foreground">
+                      Pergunte sobre suas finanças. O assistente usa seus dados reais de transações, bancos, dívidas e metas para responder.
                     </p>
                   </div>
 
-                  <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
                     {suggestedQuestions.map((question) => (
                       <button
                         key={question}
+                        type="button"
                         onClick={() => handleSend(question)}
-                        className="rounded-lg border bg-background p-3 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                        className="rounded-2xl border bg-background p-4 text-left text-sm font-semibold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5"
                       >
                         {question}
                       </button>
@@ -262,16 +281,16 @@ export default function AiChat() {
                     className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {message.role === "assistant" && (
-                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <Bot className="h-4 w-4 text-primary" />
+                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Bot className="h-5 w-5" />
                       </div>
                     )}
 
                     <Card
-                      className={`max-w-[80%] p-3 ${
+                      className={`max-w-[86%] rounded-2xl p-4 shadow-sm sm:max-w-[78%] ${
                         message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border/80 bg-muted/50"
                       }`}
                     >
                       {message.role === "assistant" ? (
@@ -279,13 +298,13 @@ export default function AiChat() {
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                        <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
                       )}
                     </Card>
 
                     {message.role === "user" && (
-                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-                        <User className="h-4 w-4 text-secondary-foreground" />
+                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                        <User className="h-5 w-5" />
                       </div>
                     )}
                   </div>
@@ -294,11 +313,11 @@ export default function AiChat() {
 
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex justify-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-5 w-5" />
                   </div>
-                  <Card className="bg-muted p-3">
-                    <div className="flex gap-1">
+                  <Card className="rounded-2xl bg-muted/50 p-4 shadow-sm">
+                    <div className="flex gap-1.5">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: "0ms" }} />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: "150ms" }} />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: "300ms" }} />
@@ -308,30 +327,31 @@ export default function AiChat() {
               )}
             </div>
           </div>
-        </div>
 
-        <div className="mt-3 flex items-end gap-2">
-          {messages.length > 0 && (
-            <Button variant="outline" size="icon" onClick={clearChat} title="Limpar conversa">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="border-t bg-background/80 p-3 backdrop-blur sm:p-4">
+            <div className="flex items-end gap-3 rounded-2xl border bg-card p-2 shadow-sm">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Pergunte sobre suas finanças..."
+                className="max-h-36 min-h-[48px] resize-none border-0 bg-transparent px-3 py-3 shadow-none focus-visible:ring-0"
+                rows={1}
+                disabled={isLoading}
+              />
 
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Pergunte sobre suas finanças..."
-            className="min-h-[44px] max-h-32 resize-none"
-            rows={1}
-            disabled={isLoading}
-          />
-
-          <Button onClick={() => handleSend()} disabled={!input.trim() || isLoading} size="icon">
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+              <Button
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                size="icon"
+                className="h-12 w-12 shrink-0 rounded-2xl"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     </AppLayout>
   );
