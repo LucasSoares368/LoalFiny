@@ -975,6 +975,8 @@ if (fs.existsSync(distPath)) {
 
   app.get("/sw.js", sendNoCacheStatic("sw.js"));
   app.get("/registerSW.js", sendNoCacheStatic("registerSW.js"));
+  app.get("/pwa-192x192.png", sendNoCacheStatic("pwa-192x192.png"));
+  app.get("/pwa-512x512.png", sendNoCacheStatic("pwa-512x512.png"));
   app.get("/workbox-:hash.js", (req, res) => {
     const fileName = `workbox-${req.params.hash}.js`;
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
