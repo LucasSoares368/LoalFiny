@@ -1,0 +1,46 @@
+project_id = "SEU_PROJECT_ID"
+
+[functions.admin-settings]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.check-achievements]
+verify_jwt = false
+
+[functions.create-mercadopago-checkout]
+verify_jwt = false
+
+[functions.evolution-api]
+verify_jwt = false
+
+[functions.get-exchange-rates]
+verify_jwt = false
+
+[functions.get-financial-news]
+verify_jwt = false
+
+[functions.get-market-quotes]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
+
+[functions.openai-config]
+verify_jwt = false
+
+[functions.process-reminders]
+verify_jwt = false
+
+[functions.process-smart-alerts]
+verify_jwt = false
+
+[functions.process-transaction-image]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false
+
+[functions.validate-signup]
+verify_jwt = false

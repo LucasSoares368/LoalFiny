@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Backgrounds - Sleek off-white with depth */
+    --background: 220 33% 98%;
+    --foreground: 224 71% 4%;
+    
+    /* Cards and Popovers - Pure white with subtle borders */
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    
+    /* Primary - Vibrant Finance Green */
+    --primary: 162 94% 30%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 162 100% 40%;
+    
+    /* Secondary - Sophisticated Slate */
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Status colors - Refined accessibility */
+    --success: 158 82% 40%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+    
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    
+    /* UI elements - Better contrast */
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 162 94% 30% / 0.05;
+    --accent-foreground: 162 94% 30%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Borders and inputs - Cleaner look */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 162 94% 30%;
+    --radius: 1rem;
+    
+    /* Charts */
+    --chart-1: 162 94% 30%;
+    --chart-2: 158 82% 40%;
+    --chart-3: 199 89% 48%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 84% 60%;
+
+    /* Sidebar */
+    --sidebar-background: 220 33% 97%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 162 94% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 162 94% 30% / 0.05;
+    --sidebar-accent-foreground: 162 94% 30%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 162 94% 30%;
+  }
+
+  .dark {
+    /* Backgrounds - Deep Rich Slate */
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    
+    /* Cards and Popovers - Glassy dark */
+    --card: 222 47% 7%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 7%;
+    --popover-foreground: 213 31% 91%;
+    
+    /* Primary - Vibrant Finance Green */
+    --primary: 162 94% 35%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 162 100% 45%;
+    
+    /* Secondary - Sophisticated Slate */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Status colors */
+    --success: 158 82% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 48 96% 53%;
+    --warning-foreground: 222 47% 4%;
+    
+    --danger: 0 84% 65%;
+    --danger-foreground: 0 0% 100%;
+    
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    
+    /* UI elements */
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 162 94% 35% / 0.15;
+    --accent-foreground: 162 94% 35%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Borders and inputs */
+    --border: 223 47% 11%;
+    --input: 223 47% 11%;
+    --ring: 162 94% 35%;
+    
+    /* Charts */
+    --chart-1: 162 94% 35%;
+    --chart-2: 158 82% 45%;
+    --chart-3: 217 91% 60%;
+    --chart-4: 48 96% 53%;
+    --chart-5: 0 84% 65%;
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 3%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 162 94% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 162 94% 35% / 0.15;
+    --sidebar-accent-foreground: 162 94% 35%;
+    --sidebar-border: 223 47% 11%;
+    --sidebar-ring: 162 94% 35%;
+  }
+}
+
+/* Marquee animation for news ticker */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 60s linear infinite;
+}
+
+.animate-marquee:hover,
+.pause-animation {
+  animation-play-state: paused;
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply tracking-tight;
+  }
+}
+
+/* Custom Sidebar Scrollbar */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.2);
+  border-radius: 20px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.4);
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide Lovable badge */
+[data-lovable-badge],
+a[href*="lovable.dev"][target="_blank"]:has(img),
+div[style*="position: fixed"][style*="bottom"]:has(a[href*="lovable"]),
+#lovable-badge,
+.lovable-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
