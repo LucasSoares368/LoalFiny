@@ -137,6 +137,12 @@ const calculateProgress = (current: number, target: number) => {
   return Math.min((current / target) * 100, 100);
 };
 
+const shouldDefaultGoalToTransfer = (goal: Goal) => {
+  const category = normalizeText(goal.category || "");
+  const name = normalizeText(goal.name || "");
+  return ["investimento", "emergencia", "reserva"].some((term) => category.includes(term) || name.includes(term));
+};
+
 const getDaysRemaining = (deadline: string | null) => {
   if (!deadline) return null;
   const today = new Date();
@@ -198,6 +204,8 @@ const Goals = () => {
   const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
   const [contributionAmount, setContributionAmount] = useState(0);
   const [contributionBankId, setContributionBankId] = useState("");
+  const [contributionDestinationBankId, setContributionDestinationBankId] = useState("");
+  const [contributionMode, setContributionMode] = useState<"transfer" | "expense">("expense");
   const [contributionPaymentMethod, setContributionPaymentMethod] = useState("pix");
   const [contributionNotes, setContributionNotes] = useState("");
   const [contributionSaving, setContributionSaving] = useState(false);
@@ -451,10 +459,13 @@ const Goals = () => {
 
   const openContributionDialog = (goal: Goal) => {
     const onlyBank = banks.length === 1 ? banks[0] : null;
+    const defaultMode = shouldDefaultGoalToTransfer(goal) ? "transfer" : "expense";
     setContributionGoal(goal);
     setContributionAmount(0);
     setContributionBankId(onlyBank?.id || "");
-    setContributionPaymentMethod(onlyBank?.account_type === "credit_card" ? "credit_card" : "pix");
+    setContributionDestinationBankId("");
+    setContributionMode(defaultMode);
+    setContributionPaymentMethod(defaultMode === "transfer" ? "goal_transfer" : onlyBank?.account_type === "credit_card" ? "credit_card" : "pix");
     setContributionNotes("");
   };
 
@@ -471,6 +482,16 @@ const Goals = () => {
       return;
     }
 
+    if (contributionMode === "transfer" && !contributionDestinationBankId) {
+      toast.error("Selecione o banco de destino da meta");
+      return;
+    }
+
+    if (contributionMode === "transfer" && contributionDestinationBankId === contributionBankId) {
+      toast.error("O banco de destino precisa ser diferente da origem");
+      return;
+    }
+
     try {
       setContributionSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -479,23 +500,30 @@ const Goals = () => {
       const selectedBank = banks.find((bank) => bank.id === contributionBankId);
       if (!selectedBank) throw new Error("Banco selecionado não encontrado");
 
+      const destinationBank = banks.find((bank) => bank.id === contributionDestinationBankId);
+      if (contributionMode === "transfer" && !destinationBank) throw new Error("Banco de destino nao encontrado");
+
       const newAmount = Math.min(contributionGoal.current_amount + contributionAmount, contributionGoal.target_amount);
       const isCompleted = newAmount >= contributionGoal.target_amount;
       const categoryId = await getGoalsCategoryId(user.id);
+      const isTransfer = contributionMode === "transfer";
+      const contributionLabel = isTransfer && destinationBank
+        ? `Transferencia para meta: ${contributionGoal.name} -> ${destinationBank.name}`
+        : `Aporte em meta: ${contributionGoal.name}`;
 
       const { error: transactionError } = await supabase.from("transactions").insert({
         user_id: user.id,
         amount: contributionAmount,
-        type: "expense",
+        type: isTransfer ? "transfer" : "expense",
         category_id: categoryId,
         description: contributionNotes.trim()
-          ? `Aporte em meta: ${contributionGoal.name} - ${contributionNotes.trim()}`
-          : `Aporte em meta: ${contributionGoal.name}`,
+          ? `${contributionLabel} - ${contributionNotes.trim()}`
+          : contributionLabel,
         date: getToday(),
         transaction_time: getCurrentTime(),
         profile_type: currentProfile,
         bank_id: contributionBankId,
-        payment_method: contributionPaymentMethod,
+        payment_method: isTransfer ? "goal_transfer" : contributionPaymentMethod,
         is_essential: false,
       });
 
@@ -507,6 +535,15 @@ const Goals = () => {
         .eq("id", contributionBankId);
 
       if (bankError) throw bankError;
+
+      if (isTransfer && destinationBank) {
+        const { error: destinationBankError } = await supabase
+          .from("banks")
+          .update({ current_balance: destinationBank.current_balance + contributionAmount })
+          .eq("id", destinationBank.id);
+
+        if (destinationBankError) throw destinationBankError;
+      }
 
       const { error: goalError } = await supabase
         .from("custom_goals")
@@ -851,13 +888,33 @@ const Goals = () => {
 
           <div className="space-y-5 py-2">
             <div className="space-y-2">
+              <Label>Tipo de aporte *</Label>
+              <Select
+                value={contributionMode}
+                onValueChange={(value) => {
+                  const nextMode = value as "transfer" | "expense";
+                  setContributionMode(nextMode);
+                  setContributionPaymentMethod(nextMode === "transfer" ? "goal_transfer" : "pix");
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transfer">Guardar ou investir em uma conta</SelectItem>
+                  <SelectItem value="expense">Quitar, pagar ou consumir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Banco/Cartão *</Label>
               <Select
                 value={contributionBankId}
                 onValueChange={(value) => {
                   const bank = banks.find((item) => item.id === value);
                   setContributionBankId(value);
-                  if (bank?.account_type === "credit_card") {
+                  if (contributionMode === "expense" && bank?.account_type === "credit_card") {
                     setContributionPaymentMethod("credit_card");
                   }
                 }}
@@ -876,6 +933,30 @@ const Goals = () => {
               </Select>
             </div>
 
+            {contributionMode === "transfer" && (
+              <div className="space-y-2">
+                <Label>Banco de destino da meta *</Label>
+                <Select
+                  value={contributionDestinationBankId}
+                  onValueChange={setContributionDestinationBankId}
+                  disabled={banksLoading}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder={banksLoading ? "Carregando..." : "Selecione para onde vai o valor"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks
+                      .filter((bank) => bank.id !== contributionBankId)
+                      .map((bank) => (
+                        <SelectItem key={bank.id} value={bank.id}>
+                          {bank.name} - {formatCurrency(bank.current_balance)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Valor *</Label>
               <CurrencyInput
@@ -886,6 +967,7 @@ const Goals = () => {
               />
             </div>
 
+            {contributionMode === "expense" && (
             <div className="space-y-2">
               <Label>Meio de Pagamento</Label>
               <Select value={contributionPaymentMethod} onValueChange={setContributionPaymentMethod}>
@@ -901,6 +983,7 @@ const Goals = () => {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             <div className="space-y-2">
               <Label>Observações</Label>
