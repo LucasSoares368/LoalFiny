@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,24 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Shield, TrendingUp, Edit2, Save, X, Loader2, Calendar, DollarSign, Minus, Lightbulb, CheckCircle2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Calendar,
+  CheckCircle2,
+  DollarSign,
+  Edit2,
+  Lightbulb,
+  Loader2,
+  Minus,
+  PiggyBank,
+  Receipt,
+  Save,
+  Shield,
+  Target,
+  TrendingUp,
+  Wallet,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -32,439 +49,448 @@ interface FixedCost {
 
 const emergencyGoalSchema = z.object({
   goal_type: z.enum(["months", "amount", "both"]),
-  target_months: z.number().min(1, "Mínimo 1 mês").max(24, "Máximo 24 meses"),
+  target_months: z.number().min(1, "Mínimo de 1 mês").max(24, "Máximo de 24 meses"),
   target_amount: z.number().positive("Valor deve ser positivo").max(999999999.99, "Valor muito alto").optional(),
 });
+
+const defaultGoal: EmergencyGoal = {
+  id: "",
+  target_months: 6,
+  target_amount: null,
+  current_amount: 0,
+  goal_type: "months",
+};
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function ReserveKpi({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tone = "primary",
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: typeof Shield;
+  tone?: "primary" | "success" | "warning";
+}) {
+  const toneClasses = {
+    primary: "bg-primary/10 text-primary",
+    success: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+    warning: "bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300",
+  };
+
+  return (
+    <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
+      <CardContent className="flex min-h-[132px] flex-col justify-between p-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-muted-foreground">{title}</p>
+          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+        <div>
+          <p className="text-2xl font-bold tracking-normal text-foreground sm:text-3xl">{value}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 const EmergencyReserve = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [costsLoading, setCostsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingAmount, setIsUpdatingAmount] = useState(false);
   const [emergencyGoal, setEmergencyGoal] = useState<EmergencyGoal | null>(null);
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [customAmount, setCustomAmount] = useState("");
-  const [editableCurrentAmount, setEditableCurrentAmount] = useState("");
   const [formData, setFormData] = useState({
     goal_type: "months" as "months" | "amount" | "both",
     target_months: 6,
     target_amount: "",
   });
 
+  const activeGoal = emergencyGoal ?? defaultGoal;
+
   useEffect(() => {
-    checkAuth();
     loadData();
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // Load emergency goal
-      const { data: goalData, error: goalError } = await supabase
-        .from("emergency_goals")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (goalError) throw goalError;
-
-      if (goalData) {
-        setEmergencyGoal(goalData as EmergencyGoal);
-        setFormData({
-          goal_type: (goalData.goal_type as "months" | "amount" | "both") || "months",
-          target_months: goalData.target_months || 6,
-          target_amount: goalData.target_amount?.toString() || "",
-        });
+      if (!user) {
+        navigate("/auth");
+        return;
       }
 
-      await loadFixedCosts(user.id);
-    } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error("Erro ao carregar dados");
+      const [{ data: goalData, error: goalError }, costsResult] = await Promise.all([
+        supabase.from("emergency_goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("fixed_costs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+      ]);
+
+      if (goalError) throw goalError;
+      if (costsResult.error) throw costsResult.error;
+
+      const normalizedGoal = goalData
+        ? {
+            id: goalData.id,
+            goal_type: (goalData.goal_type as EmergencyGoal["goal_type"]) || "months",
+            target_months: toNumber(goalData.target_months) || 6,
+            target_amount: goalData.target_amount === null ? null : toNumber(goalData.target_amount),
+            current_amount: toNumber(goalData.current_amount),
+          }
+        : null;
+
+      setEmergencyGoal(normalizedGoal);
+      setFormData({
+        goal_type: normalizedGoal?.goal_type || "months",
+        target_months: normalizedGoal?.target_months || 6,
+        target_amount: normalizedGoal?.target_amount ? String(normalizedGoal.target_amount) : "",
+      });
+      setFixedCosts((costsResult.data || []).map((cost: any) => ({ ...cost, amount: toNumber(cost.amount) })));
+    } catch (error: any) {
+      console.error("Error loading emergency reserve:", error);
+      toast.error("Erro ao carregar reserva: " + (error?.message || "tente novamente"));
     } finally {
+      setCostsLoading(false);
       setLoading(false);
     }
   };
 
-  const loadFixedCosts = async (userId: string) => {
+  const handleRefreshCosts = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
     try {
       setCostsLoading(true);
       const { data, error } = await supabase
         .from("fixed_costs")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: true });
-
       if (error) throw error;
-
-      setFixedCosts(data || []);
-    } catch (error) {
-      console.error("Error loading fixed costs:", error);
+      setFixedCosts((data || []).map((cost: any) => ({ ...cost, amount: toNumber(cost.amount) })));
+    } catch (error: any) {
+      toast.error("Erro ao atualizar custos: " + error.message);
     } finally {
       setCostsLoading(false);
     }
   };
 
-  const handleRefreshCosts = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await loadFixedCosts(user.id);
-    }
-  };
+  const monthlyFixedCosts = useMemo(
+    () => fixedCosts.filter((cost) => !cost.is_variable).reduce((sum, cost) => sum + toNumber(cost.amount), 0),
+    [fixedCosts],
+  );
 
-  const monthlyFixedCosts = fixedCosts.reduce((sum, cost) => sum + cost.amount, 0);
+  const monthlyTotalCosts = useMemo(
+    () => fixedCosts.reduce((sum, cost) => sum + toNumber(cost.amount), 0),
+    [fixedCosts],
+  );
+
+  const targetAmount = useMemo(() => {
+    if (activeGoal.goal_type === "months") return monthlyFixedCosts * activeGoal.target_months;
+    if (activeGoal.goal_type === "amount") return activeGoal.target_amount || 0;
+    return Math.max(monthlyFixedCosts * activeGoal.target_months, activeGoal.target_amount || 0);
+  }, [activeGoal.goal_type, activeGoal.target_amount, activeGoal.target_months, monthlyFixedCosts]);
+
+  const progress = targetAmount > 0 ? Math.min((activeGoal.current_amount / targetAmount) * 100, 100) : 0;
+  const remaining = Math.max(targetAmount - activeGoal.current_amount, 0);
+  const coveredMonths = monthlyFixedCosts > 0 ? activeGoal.current_amount / monthlyFixedCosts : 0;
 
   const handleSave = async () => {
     try {
       const validatedData = emergencyGoalSchema.parse({
         goal_type: formData.goal_type,
         target_months: formData.target_months,
-        target_amount: formData.target_amount ? parseFloat(formData.target_amount) : undefined,
+        target_amount: formData.target_amount ? Number(formData.target_amount) : undefined,
       });
 
       setIsSaving(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      const updateData: any = {
+      const payload = {
         goal_type: validatedData.goal_type,
         target_months: validatedData.target_months,
         target_amount: validatedData.target_amount || null,
       };
 
-      const { error } = await supabase
-        .from("emergency_goals")
-        .update(updateData)
-        .eq("user_id", user.id);
+      if (emergencyGoal?.id) {
+        const { error } = await supabase.from("emergency_goals").update(payload).eq("id", emergencyGoal.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("emergency_goals").insert({
+          user_id: user.id,
+          current_amount: 0,
+          ...payload,
+        });
+        if (error) throw error;
+      }
 
-      if (error) throw error;
-
-      toast.success("Meta atualizada com sucesso!");
+      toast.success("Reserva configurada com sucesso!");
       setIsEditing(false);
-      loadData();
+      await loadData();
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
-      } else {
-        toast.error("Erro ao salvar: " + error.message);
+        return;
       }
+      toast.error("Erro ao salvar: " + error.message);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const ensureGoalExists = async (userId: string) => {
+    if (emergencyGoal?.id) return emergencyGoal.id;
+
+    const { data, error } = await supabase
+      .from("emergency_goals")
+      .insert({
+        user_id: userId,
+        current_amount: 0,
+        goal_type: activeGoal.goal_type,
+        target_months: activeGoal.target_months,
+        target_amount: activeGoal.target_amount,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  };
+
   const handleUpdateAmount = async (amount: number) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não encontrado");
 
-      if (!emergencyGoal) return;
+      setIsUpdatingAmount(true);
+      const goalId = await ensureGoalExists(user.id);
+      const newAmount = Math.max(0, activeGoal.current_amount + amount);
 
-      const newAmount = Math.max(0, emergencyGoal.current_amount + amount);
-
-      const { error } = await supabase
-        .from("emergency_goals")
-        .update({ current_amount: newAmount })
-        .eq("user_id", user.id);
-
+      const { error } = await supabase.from("emergency_goals").update({ current_amount: newAmount }).eq("id", goalId);
       if (error) throw error;
 
-      const action = amount > 0 ? "adicionado à" : "removido da";
-      toast.success(`R$ ${Math.abs(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${action} reserva!`);
+      const action = amount > 0 ? "adicionado à" : "retirado da";
+      toast.success(`${formatCurrency(Math.abs(amount))} ${action} reserva.`);
       setCustomAmount("");
-      loadData();
+      await loadData();
     } catch (error: any) {
       toast.error("Erro ao atualizar: " + error.message);
+    } finally {
+      setIsUpdatingAmount(false);
     }
-  };
-
-  const handleSaveCurrentAmount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não encontrado");
-
-      const newAmount = parseFloat(editableCurrentAmount.replace(",", "."));
-      if (isNaN(newAmount) || newAmount < 0) {
-        toast.error("Valor inválido");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("emergency_goals")
-        .update({ current_amount: newAmount })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      toast.success("Valor atualizado com sucesso!");
-      setIsEditingAmount(false);
-      loadData();
-    } catch (error: any) {
-      toast.error("Erro ao atualizar: " + error.message);
-    }
-  };
-
-  const startEditingAmount = () => {
-    setEditableCurrentAmount((emergencyGoal?.current_amount || 0).toFixed(2).replace(".", ","));
-    setIsEditingAmount(true);
-  };
-
-  const cancelEditingAmount = () => {
-    setIsEditingAmount(false);
-    setEditableCurrentAmount("");
   };
 
   const handleCustomAmount = (isAdd: boolean) => {
-    const value = parseFloat(customAmount);
-    if (!isNaN(value) && value > 0) {
-      handleUpdateAmount(isAdd ? value : -value);
+    const value = Number(String(customAmount).replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error("Informe um valor válido");
+      return;
     }
+    handleUpdateAmount(isAdd ? value : -value);
   };
 
   const handleUpdateCostAmount = async (costId: string, newAmount: number) => {
     try {
-      const { error } = await supabase
-        .from("fixed_costs")
-        .update({ amount: newAmount })
-        .eq("id", costId);
-
+      const { error } = await supabase.from("fixed_costs").update({ amount: newAmount }).eq("id", costId);
       if (error) throw error;
-
-      // Refresh the costs list
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await loadFixedCosts(user.id);
-      }
+      await handleRefreshCosts();
     } catch (error: any) {
       toast.error("Erro ao atualizar custo: " + error.message);
     }
   };
 
-  const calculateTargetAmount = () => {
-    if (!emergencyGoal) return 0;
-    
-    switch (emergencyGoal.goal_type) {
-      case "months":
-        return monthlyFixedCosts * emergencyGoal.target_months;
-      case "amount":
-        return emergencyGoal.target_amount || 0;
-      case "both":
-        const monthsAmount = monthlyFixedCosts * emergencyGoal.target_months;
-        const targetAmount = emergencyGoal.target_amount || 0;
-        return Math.max(monthsAmount, targetAmount);
-      default:
-        return 0;
-    }
-  };
-
-  const calculateProgress = () => {
-    if (!emergencyGoal) return 0;
-    const target = calculateTargetAmount();
-    if (target === 0) return 0;
-    return Math.min((emergencyGoal.current_amount / target) * 100, 100);
-  };
-
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary mb-4" />
-            <p className="text-muted-foreground">Carregando reserva...</p>
+      <AppLayout title="Reserva de Emergência">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-14 w-14 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-72" />
+              <Skeleton className="h-5 w-96 max-w-full" />
+            </div>
           </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-32 rounded-2xl" />
+            ))}
+          </div>
+          <Skeleton className="h-96 rounded-2xl" />
         </div>
       </AppLayout>
     );
   }
 
-  const targetAmount = calculateTargetAmount();
-  const progress = calculateProgress();
-  const remaining = targetAmount - (emergencyGoal?.current_amount || 0);
-
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+    <AppLayout title="Reserva de Emergência">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Shield className="h-7 w-7" />
+            </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold">Reserva de Emergência</h1>
-              <p className="text-sm text-muted-foreground">Sua segurança financeira</p>
+              <h1 className="text-3xl font-bold tracking-normal text-foreground">Reserva de Emergência</h1>
+              <p className="text-lg text-muted-foreground">Monte uma proteção financeira para imprevistos.</p>
             </div>
           </div>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} variant="outline" className="gap-2 w-full sm:w-auto">
-              <Edit2 className="h-4 w-4" />
-              Editar Meta
-            </Button>
-          )}
+          <Button onClick={() => setIsEditing(true)} className="h-12 rounded-2xl px-8 text-base font-bold">
+            <Edit2 className="mr-2 h-5 w-5" />
+            Editar Meta
+          </Button>
         </div>
 
-        {/* Main Progress Card */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg sm:text-2xl">
-              {progress >= 100 
-                ? "🎉 Parabéns! Meta alcançada!"
-                : "Continue guardando para sua independência"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Progress Circle and Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              {/* Visual Progress */}
-              <div className="flex flex-col items-center justify-center p-4 sm:p-8 bg-muted/30 rounded-2xl">
-                <div className="relative w-36 h-36 sm:w-48 sm:h-48 mb-4">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="88"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="12"
-                      className="text-muted"
-                    />
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="88"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="12"
-                      strokeDasharray={`${2 * Math.PI * 88}`}
-                      strokeDashoffset={`${2 * Math.PI * 88 * (1 - progress / 100)}`}
-                      strokeLinecap="round"
-                      className="text-primary transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl sm:text-5xl font-bold text-primary">{progress.toFixed(0)}%</span>
-                    <span className="text-xs sm:text-sm text-muted-foreground">Completo</span>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <ReserveKpi
+            title="Reserva Atual"
+            value={formatCurrency(activeGoal.current_amount)}
+            description={`${coveredMonths.toFixed(1)} meses cobertos`}
+            icon={Wallet}
+            tone="success"
+          />
+          <ReserveKpi
+            title="Meta"
+            value={formatCurrency(targetAmount)}
+            description={targetAmount > 0 ? `${progress.toFixed(1)}% concluído` : "Configure custos ou valor fixo"}
+            icon={Target}
+          />
+          <ReserveKpi
+            title="Faltam"
+            value={formatCurrency(remaining)}
+            description={remaining > 0 ? "Para atingir a meta" : "Meta atingida"}
+            icon={TrendingUp}
+            tone="warning"
+          />
+          <ReserveKpi
+            title="Custos Mensais"
+            value={formatCurrency(monthlyFixedCosts)}
+            description={`${fixedCosts.filter((cost) => !cost.is_variable).length} custos fixos ativos`}
+            icon={Receipt}
+          />
+        </div>
+
+        <Card className="overflow-hidden rounded-2xl border-primary/20 bg-card shadow-sm">
+          <CardContent className="grid gap-8 p-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-6">
+              <div>
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-wide text-primary">Progresso da reserva</p>
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {progress >= 100 ? "Reserva completa" : "Continue protegendo seu caixa"}
+                    </h2>
                   </div>
+                  <p className="text-3xl font-bold text-primary">{progress.toFixed(0)}%</p>
                 </div>
-                <Progress value={progress} className="h-3 w-full" />
+                <Progress value={progress} className="h-4 rounded-full" />
+                <div className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:justify-between">
+                  <span>{formatCurrency(activeGoal.current_amount)} guardados</span>
+                  <span>Meta de {formatCurrency(targetAmount)}</span>
+                </div>
               </div>
 
-              {/* Stats */}
-              <div className="space-y-4 sm:space-y-6">
-                <div className="space-y-1 sm:space-y-2">
-                  <Label className="text-xs sm:text-sm text-muted-foreground">Valor Atual na Reserva</Label>
-                  {isEditingAmount ? (
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-primary">R$</span>
-                        <Input
-                          type="text"
-                          value={editableCurrentAmount}
-                          onChange={(e) => setEditableCurrentAmount(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveCurrentAmount();
-                            if (e.key === "Escape") cancelEditingAmount();
-                          }}
-                          className="pl-12 text-2xl sm:text-3xl font-bold h-14 text-primary"
-                          autoFocus
-                        />
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[3, 6, 12].map((months) => {
+                  const amount = monthlyFixedCosts * months;
+                  const recommendationProgress = amount > 0 ? Math.min((activeGoal.current_amount / amount) * 100, 100) : 0;
+                  return (
+                    <div key={months} className="rounded-2xl border border-border/80 bg-muted/30 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="font-semibold text-foreground">{months} meses</span>
+                        {recommendationProgress >= 100 && <CheckCircle2 className="h-5 w-5 text-primary" />}
                       </div>
-                      <Button size="icon" onClick={handleSaveCurrentAmount} className="h-14 w-14">
-                        <Save className="h-5 w-5" />
-                      </Button>
-                      <Button size="icon" variant="outline" onClick={cancelEditingAmount} className="h-14 w-14">
-                        <X className="h-5 w-5" />
-                      </Button>
+                      <p className="text-xl font-bold text-foreground">{formatCurrency(amount)}</p>
+                      <Progress value={recommendationProgress} className="mt-3 h-2" />
                     </div>
-                  ) : (
-                    <button 
-                      onClick={startEditingAmount}
-                      className="group flex items-center gap-2 text-left hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
-                    >
-                      <p className="text-2xl sm:text-4xl font-bold text-primary break-all">
-                        R$ {(emergencyGoal?.current_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <Edit2 className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <Label className="text-xs sm:text-sm text-muted-foreground">Valor Meta</Label>
-                  <p className="text-xl sm:text-3xl font-bold break-all">
-                    R$ {targetAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  {targetAmount === 0 && monthlyFixedCosts === 0 && (
-                    <p className="text-sm text-warning">⚠️ Cadastre seus custos fixos abaixo</p>
-                  )}
-                </div>
-                {remaining > 0 && (
-                  <div className="space-y-1 sm:space-y-2">
-                    <Label className="text-xs sm:text-sm text-muted-foreground">Faltam</Label>
-                    <p className="text-lg sm:text-2xl font-bold text-secondary break-all">
-                      R$ {remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             </div>
 
-            {/* Add/Remove Amount */}
-            <div className="p-4 sm:p-6 bg-primary/5 rounded-xl border border-primary/20">
-              <Label className="text-sm sm:text-base font-semibold mb-3 block">Atualizar Reserva</Label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Digite o valor"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleCustomAmount(true);
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleCustomAmount(true)}
-                    className="flex-1 sm:flex-none bg-primary hover:bg-primary/90"
-                    disabled={!customAmount || parseFloat(customAmount) <= 0}
-                  >
-                    <TrendingUp className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Adicionar</span>
-                  </Button>
-                  <Button
-                    onClick={() => handleCustomAmount(false)}
-                    variant="outline"
-                    className="flex-1 sm:flex-none text-destructive hover:text-destructive"
-                    disabled={!customAmount || parseFloat(customAmount) <= 0}
-                  >
-                    <Minus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Retirar</span>
-                  </Button>
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                  <PiggyBank className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Atualizar reserva</h3>
+                  <p className="text-sm text-muted-foreground">Registre aportes ou retiradas.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-2 mt-3">
+
+              <Label htmlFor="reserve-amount">Valor</Label>
+              <Input
+                id="reserve-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={customAmount}
+                onChange={(event) => setCustomAmount(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleCustomAmount(true);
+                }}
+                className="mt-2 h-12 rounded-2xl bg-card text-base"
+              />
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Button
+                  onClick={() => handleCustomAmount(true)}
+                  disabled={isUpdatingAmount}
+                  className="h-12 rounded-2xl font-bold"
+                >
+                  {isUpdatingAmount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
+                  Adicionar
+                </Button>
+                <Button
+                  onClick={() => handleCustomAmount(false)}
+                  disabled={isUpdatingAmount || activeGoal.current_amount <= 0}
+                  variant="outline"
+                  className="h-12 rounded-2xl font-bold text-destructive hover:text-destructive"
+                >
+                  <Minus className="mr-2 h-4 w-4" />
+                  Retirar
+                </Button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-4 gap-2">
                 {[100, 200, 500, 1000].map((value) => (
                   <Button
                     key={value}
                     variant="outline"
                     size="sm"
+                    disabled={isUpdatingAmount}
                     onClick={() => handleUpdateAmount(value)}
-                    className="text-xs sm:text-sm"
+                    className="rounded-xl bg-card text-xs"
                   >
-                    +R${value}
+                    +{value}
                   </Button>
                 ))}
               </div>
@@ -472,116 +498,103 @@ const EmergencyReserve = () => {
           </CardContent>
         </Card>
 
-        {/* Goal Configuration */}
         {isEditing ? (
-          <Card>
+          <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
             <CardHeader>
               <CardTitle>Configurar Meta de Reserva</CardTitle>
-              <CardDescription>
-                Defina como você quer calcular sua reserva de emergência
-              </CardDescription>
+              <CardDescription>Defina se a reserva será calculada por meses, por valor fixo ou pelos dois critérios.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <RadioGroup value={formData.goal_type} onValueChange={(value: any) => setFormData({ ...formData, goal_type: value })}>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <RadioGroupItem value="months" id="months" />
-                    <div className="flex-1">
-                      <Label htmlFor="months" className="cursor-pointer font-semibold flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Baseado em Meses de Custos Fixos
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Meta calculada: R$ {(monthlyFixedCosts * formData.target_months).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
+              <RadioGroup
+                value={formData.goal_type}
+                onValueChange={(value: EmergencyGoal["goal_type"]) => setFormData({ ...formData, goal_type: value })}
+                className="grid gap-3 lg:grid-cols-3"
+              >
+                <Label htmlFor="months" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/80 p-4 hover:bg-muted/50">
+                  <RadioGroupItem value="months" id="months" />
+                  <div>
+                    <span className="flex items-center gap-2 font-bold">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Meses de custos
+                    </span>
+                    <p className="mt-1 text-sm text-muted-foreground">Usa seus custos fixos para calcular a reserva ideal.</p>
                   </div>
-                  
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <RadioGroupItem value="amount" id="amount" />
-                    <div className="flex-1">
-                      <Label htmlFor="amount" className="cursor-pointer font-semibold flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Valor Fixo em Reais
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Defina um valor específico como meta
-                      </p>
-                    </div>
-                  </div>
+                </Label>
 
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <RadioGroupItem value="both" id="both" />
-                    <div className="flex-1">
-                      <Label htmlFor="both" className="cursor-pointer font-semibold flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Ambos (o maior valor)
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Usa o maior valor entre meses e valor fixo
-                      </p>
-                    </div>
+                <Label htmlFor="amount" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/80 p-4 hover:bg-muted/50">
+                  <RadioGroupItem value="amount" id="amount" />
+                  <div>
+                    <span className="flex items-center gap-2 font-bold">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      Valor fixo
+                    </span>
+                    <p className="mt-1 text-sm text-muted-foreground">Você define manualmente o valor alvo.</p>
                   </div>
-                </div>
+                </Label>
+
+                <Label htmlFor="both" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/80 p-4 hover:bg-muted/50">
+                  <RadioGroupItem value="both" id="both" />
+                  <div>
+                    <span className="flex items-center gap-2 font-bold">
+                      <Shield className="h-4 w-4 text-primary" />
+                      Maior valor
+                    </span>
+                    <p className="mt-1 text-sm text-muted-foreground">Usa o maior valor entre meses e alvo manual.</p>
+                  </div>
+                </Label>
               </RadioGroup>
 
-              {(formData.goal_type === "months" || formData.goal_type === "both") && (
-                <div className="space-y-2">
-                  <Label htmlFor="target_months">Quantidade de Meses</Label>
-                  <Input
-                    id="target_months"
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={formData.target_months}
-                    onChange={(e) => setFormData({ ...formData, target_months: parseInt(e.target.value) || 1 })}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Custos fixos mensais: R$ {monthlyFixedCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    {monthlyFixedCosts === 0 && " (Configure seus custos fixos abaixo)"}
-                  </p>
-                </div>
-              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(formData.goal_type === "months" || formData.goal_type === "both") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="target_months">Quantidade de meses</Label>
+                    <Input
+                      id="target_months"
+                      type="number"
+                      min="1"
+                      max="24"
+                      value={formData.target_months}
+                      onChange={(event) => setFormData({ ...formData, target_months: Number(event.target.value) || 1 })}
+                      className="h-12 rounded-2xl"
+                    />
+                    <p className="text-sm text-muted-foreground">Custos fixos mensais: {formatCurrency(monthlyFixedCosts)}</p>
+                  </div>
+                )}
 
-              {(formData.goal_type === "amount" || formData.goal_type === "both") && (
-                <div className="space-y-2">
-                  <Label htmlFor="target_amount">Valor-Alvo (R$)</Label>
-                  <Input
-                    id="target_amount"
-                    type="number"
-                    step="0.01"
-                    placeholder="10000.00"
-                    value={formData.target_amount}
-                    onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
-                  />
-                </div>
-              )}
+                {(formData.goal_type === "amount" || formData.goal_type === "both") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="target_amount">Valor alvo</Label>
+                    <Input
+                      id="target_amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="10000.00"
+                      value={formData.target_amount}
+                      onChange={(event) => setFormData({ ...formData, target_amount: event.target.value })}
+                      className="h-12 rounded-2xl"
+                    />
+                  </div>
+                )}
+              </div>
 
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Salvar Configuração
-                    </>
-                  )}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button onClick={handleSave} disabled={isSaving} className="h-12 rounded-2xl px-8 font-bold">
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Salvar Configuração
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
                     setIsEditing(false);
-                    loadData();
+                    setFormData({
+                      goal_type: activeGoal.goal_type,
+                      target_months: activeGoal.target_months,
+                      target_amount: activeGoal.target_amount ? String(activeGoal.target_amount) : "",
+                    });
                   }}
                   disabled={isSaving}
+                  className="h-12 rounded-2xl px-8 font-bold"
                 >
                   <X className="mr-2 h-4 w-4" />
                   Cancelar
@@ -590,139 +603,70 @@ const EmergencyReserve = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração Atual</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <span className="font-semibold">Tipo de Meta:</span>
-                  <span>
-                    {emergencyGoal?.goal_type === "months" && "Baseado em Meses"}
-                    {emergencyGoal?.goal_type === "amount" && "Valor Fixo"}
-                    {emergencyGoal?.goal_type === "both" && "Ambos"}
-                  </span>
+          <div className="grid gap-5 lg:grid-cols-3">
+            <Card className="rounded-2xl border-border/80 bg-card shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Configuração Atual</CardTitle>
+                <CardDescription>Resumo do cálculo usado para sua reserva.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Tipo de meta</p>
+                  <p className="mt-1 font-bold text-foreground">
+                    {activeGoal.goal_type === "months" && "Baseada em meses"}
+                    {activeGoal.goal_type === "amount" && "Valor fixo"}
+                    {activeGoal.goal_type === "both" && "Maior valor"}
+                  </p>
                 </div>
-                {(emergencyGoal?.goal_type === "months" || emergencyGoal?.goal_type === "both") && (
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="font-semibold">Meses de Cobertura:</span>
-                    <span>{emergencyGoal?.target_months} meses</span>
-                  </div>
-                )}
-                {(emergencyGoal?.goal_type === "amount" || emergencyGoal?.goal_type === "both") && emergencyGoal?.target_amount && (
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="font-semibold">Valor-Alvo:</span>
-                    <span>R$ {emergencyGoal.target_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <span className="font-semibold">Custos Fixos Mensais:</span>
-                  <span>R$ {monthlyFixedCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Cobertura planejada</p>
+                  <p className="mt-1 font-bold text-foreground">{activeGoal.target_months} meses</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Valor alvo manual</p>
+                  <p className="mt-1 font-bold text-foreground">{formatCurrency(activeGoal.target_amount || 0)}</p>
+                </div>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Custos mensais totais</p>
+                  <p className="mt-1 font-bold text-foreground">{formatCurrency(monthlyTotalCosts)}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-primary/20 bg-card shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  Recomendação
+                </CardTitle>
+                <CardDescription>Especialistas sugerem entre 6 e 12 meses de custos essenciais.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {monthlyFixedCosts > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-2xl bg-primary/5 p-4">
+                      <span className="font-semibold">Mínimo</span>
+                      <span className="font-bold text-primary">{formatCurrency(monthlyFixedCosts * 6)}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl bg-muted/40 p-4">
+                      <span className="font-semibold">Ideal</span>
+                      <span className="font-bold">{formatCurrency(monthlyFixedCosts * 12)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Cadastre seus custos fixos abaixo para receber uma recomendação automática.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* Recommendations Card */}
-        {monthlyFixedCosts > 0 && (
-          <Card className="border-secondary/30 bg-gradient-to-br from-secondary/5 via-background to-background">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-secondary" />
-                Recomendações de Reserva
-              </CardTitle>
-              <CardDescription>
-                Valores ideais baseados nos seus custos fixos de R$ {monthlyFixedCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                {/* 6 Months Recommendation */}
-                <div className={`p-4 rounded-xl border-2 transition-all ${
-                  (emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 6
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted bg-muted/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Mínimo Recomendado</span>
-                    {(emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 6 && (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                  <p className="text-2xl font-bold text-primary">
-                    R$ {(monthlyFixedCosts * 6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    6 meses de custos fixos
-                  </p>
-                  <Progress 
-                    value={Math.min(((emergencyGoal?.current_amount || 0) / (monthlyFixedCosts * 6)) * 100, 100)} 
-                    className="h-2 mt-3" 
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {(emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 6 
-                      ? '✅ Meta atingida!' 
-                      : `Faltam R$ ${Math.max(0, monthlyFixedCosts * 6 - (emergencyGoal?.current_amount || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    }
-                  </p>
-                </div>
+        <FixedCostsManager costs={fixedCosts} onUpdate={handleRefreshCosts} loading={costsLoading} />
 
-                {/* 12 Months Recommendation */}
-                <div className={`p-4 rounded-xl border-2 transition-all ${
-                  (emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 12
-                    ? 'border-secondary bg-secondary/5'
-                    : 'border-muted bg-muted/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Ideal para Segurança Total</span>
-                    {(emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 12 && (
-                      <CheckCircle2 className="h-5 w-5 text-secondary" />
-                    )}
-                  </div>
-                  <p className="text-2xl font-bold text-secondary">
-                    R$ {(monthlyFixedCosts * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    12 meses de custos fixos
-                  </p>
-                  <Progress 
-                    value={Math.min(((emergencyGoal?.current_amount || 0) / (monthlyFixedCosts * 12)) * 100, 100)} 
-                    className="h-2 mt-3" 
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {(emergencyGoal?.current_amount || 0) >= monthlyFixedCosts * 12 
-                      ? '🏆 Segurança total!' 
-                      : `Faltam R$ ${Math.max(0, monthlyFixedCosts * 12 - (emergencyGoal?.current_amount || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    }
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm">
-                <p className="flex items-start gap-2 text-foreground">
-                  <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                  <span>
-                    <span className="font-semibold text-primary">Dica:</span> Especialistas recomendam ter entre 6 e 12 meses de custos essenciais guardados. 
-                    Comece com 6 meses e evolua para 12 para maior tranquilidade.
-                  </span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Fixed Costs Manager */}
-        <FixedCostsManager 
-          costs={fixedCosts} 
-          onUpdate={handleRefreshCosts}
-          loading={costsLoading}
-        />
-
-        {/* Variable Cost Analytics */}
-        <VariableCostAnalytics 
-          variableCosts={fixedCosts.filter(c => c.is_variable)}
+        <VariableCostAnalytics
+          variableCosts={fixedCosts.filter((cost) => cost.is_variable)}
           onUpdateCostAmount={handleUpdateCostAmount}
         />
       </div>
