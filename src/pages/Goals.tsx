@@ -172,7 +172,7 @@ const Goals = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [quickAmounts, setQuickAmounts] = useState<Record<string, number>>({});
-  const { plan, usage, canAddGoal, refetch: refetchPlan } = useUserPlan();
+  const { plan, usage, loading: planLoading, canAddGoal, refetch: refetchPlan } = useUserPlan();
   const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
@@ -228,6 +228,10 @@ const Goals = () => {
   const globalProgress = calculateProgress(totalSaved, totalTarget);
 
   const openCreateDialog = () => {
+    if (planLoading) {
+      return;
+    }
+
     if (!canAddGoal()) {
       toast.error(`Limite de ${plan.max_goals} metas atingido. Faça upgrade para adicionar mais.`);
       navigate("/upgrade");
@@ -350,7 +354,10 @@ const Goals = () => {
     }
   };
 
-  const shouldShowLimit = Number(plan.max_goals || 0) < 999 && usage.goals_count >= Math.max(Number(plan.max_goals || 0) - 1, 0);
+  const shouldShowLimit =
+    !planLoading &&
+    Number(plan.max_goals || 0) < 999 &&
+    usage.goals_count >= Math.max(Number(plan.max_goals || 0) - 1, 0);
 
   const renderGoalCard = (goal: Goal) => {
     const progress = calculateProgress(goal.current_amount, goal.target_amount);
@@ -464,7 +471,7 @@ const Goals = () => {
               <p className="text-lg text-muted-foreground">Acompanhe objetivos financeiros e evolução do dinheiro guardado</p>
             </div>
           </div>
-          <Button onClick={openCreateDialog} className="h-12 rounded-2xl px-8 text-base font-bold">
+          <Button onClick={openCreateDialog} disabled={planLoading} className="h-12 rounded-2xl px-8 text-base font-bold">
             <Plus className="mr-2 h-5 w-5" />
             Nova Meta
           </Button>
@@ -516,7 +523,7 @@ const Goals = () => {
             <p className="mt-2 max-w-md text-lg text-muted-foreground">
               Crie sua primeira meta e acompanhe cada avanço até chegar no objetivo.
             </p>
-            <Button onClick={openCreateDialog} className="mt-6 h-12 rounded-2xl px-8 text-base font-bold">
+            <Button onClick={openCreateDialog} disabled={planLoading} className="mt-6 h-12 rounded-2xl px-8 text-base font-bold">
               <Plus className="mr-2 h-5 w-5" />
               Criar Primeira Meta
             </Button>
