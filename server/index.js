@@ -291,6 +291,28 @@ function defaultPlan() {
   };
 }
 
+function fullFeaturePlan(planName = "Business") {
+  return {
+    ...defaultPlan(),
+    plan_type: "business",
+    plan_name: planName,
+    max_goals: 999,
+    max_reminders: 999,
+    whatsapp_enabled: true,
+    reports_enabled: true,
+    cashflow_projection_enabled: true,
+    export_enabled: true,
+    split_enabled: true,
+    business_profile_enabled: true,
+    advanced_dashboard_enabled: true,
+    annual_projection_enabled: true,
+    history_months: 9999,
+    monthly_planning_enabled: true,
+    ai_enabled: true,
+    import_enabled: true,
+  };
+}
+
 function handleError(res, error) {
   const status = error.status || 500;
   res.status(status).json({ error: error.message || "Erro interno" });
@@ -701,28 +723,58 @@ app.post("/api/rpc/get_user_plan", authRequired, async (_req, res) => {
   try {
     if (isAdminUser(_req.user)) {
       return res.json({
+        data: [fullFeaturePlan("Admin")],
+        error: null,
+      });
+    }
+
+    const rows = await query(
+      `
+        select
+          p.plan_type,
+          p.name as plan_name,
+          p.max_banks,
+          p.max_goals,
+          p.max_reminders,
+          p.whatsapp_enabled,
+          p.reports_enabled,
+          p.cashflow_projection_enabled,
+          p.export_enabled,
+          p.split_enabled,
+          p.business_profile_enabled,
+          p.advanced_dashboard_enabled,
+          p.annual_projection_enabled,
+          p.history_months,
+          p.monthly_planning_enabled,
+          s.status
+        from subscriptions s
+        join plans p on p.id = s.plan_id
+        where s.user_id = ?
+          and s.status = 'active'
+          and (s.current_period_end is null or s.current_period_end > now())
+        order by s.updated_at desc, s.created_at desc
+        limit 1
+      `,
+      [_req.user.id],
+    ).catch(() => []);
+
+    if (rows[0]) {
+      const plan = rows[0];
+      const planType = String(plan.plan_type || "starter").toLowerCase();
+      return res.json({
         data: [{
           ...defaultPlan(),
-          plan_type: "business",
-          plan_name: "Admin",
-          max_goals: 999,
-          max_reminders: 999,
-          whatsapp_enabled: true,
-          reports_enabled: true,
-          cashflow_projection_enabled: true,
-          export_enabled: true,
-          split_enabled: true,
-          business_profile_enabled: true,
-          advanced_dashboard_enabled: true,
-          annual_projection_enabled: true,
-          history_months: 9999,
-          monthly_planning_enabled: true,
-          ai_enabled: true,
-          import_enabled: true,
+          ...normalizeRow(plan),
+          plan_type: planType,
+          plan_name: plan.plan_name || planType,
+          is_active: true,
+          ai_enabled: !["starter", "free"].includes(planType),
+          import_enabled: !["starter", "free"].includes(planType),
         }],
         error: null,
       });
     }
+
     res.json({ data: [defaultPlan()], error: null });
   } catch (error) {
     handleError(res, error);
