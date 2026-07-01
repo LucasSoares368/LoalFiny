@@ -13,7 +13,7 @@ type AuthSession = {
 
 type Filter = {
   column: string;
-  op: "eq" | "neq" | "lt" | "lte" | "gt" | "gte" | "in" | "is" | "not";
+  op: "eq" | "neq" | "lt" | "lte" | "gt" | "gte" | "in" | "is" | "not" | "ilike";
   operator?: string;
   value: unknown;
 };
@@ -62,18 +62,23 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 class QueryBuilder {
   private action: "select" | "insert" | "update" | "delete" | "upsert" = "select";
   private filters: Filter[] = [];
+  private orFilters: string[] = [];
   private selected = "*";
+  private selectOptions: Record<string, unknown> = {};
   private payload: unknown;
   private orderBy: { column: string; ascending?: boolean } | null = null;
   private limitCount: number | null = null;
+  private rangeFrom: number | null = null;
+  private rangeTo: number | null = null;
   private singleResult = false;
   private maybeSingleResult = false;
   private upsertOptions: Record<string, unknown> = {};
 
   constructor(private table: string) {}
 
-  select(columns = "*") {
+  select(columns = "*", options: Record<string, unknown> = {}) {
     this.selected = columns;
+    this.selectOptions = options;
     return this;
   }
 
@@ -146,6 +151,16 @@ class QueryBuilder {
     return this;
   }
 
+  ilike(column: string, value: string) {
+    this.filters.push({ column, op: "ilike", value });
+    return this;
+  }
+
+  or(expression: string) {
+    this.orFilters.push(expression);
+    return this;
+  }
+
   order(column: string, options: { ascending?: boolean } = {}) {
     this.orderBy = { column, ascending: options.ascending };
     return this;
@@ -153,6 +168,12 @@ class QueryBuilder {
 
   limit(count: number) {
     this.limitCount = count;
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.rangeFrom = from;
+    this.rangeTo = to;
     return this;
   }
 
@@ -172,10 +193,13 @@ class QueryBuilder {
       body: JSON.stringify({
         action: this.action,
         columns: this.selected,
+        selectOptions: this.selectOptions,
         filters: this.filters,
+        orFilters: this.orFilters,
         payload: this.payload,
         order: this.orderBy,
         limit: this.limitCount,
+        range: this.rangeFrom === null || this.rangeTo === null ? null : { from: this.rangeFrom, to: this.rangeTo },
         single: this.singleResult,
         maybeSingle: this.maybeSingleResult,
         ...this.upsertOptions,
@@ -201,6 +225,15 @@ export const supabase = {
       method: "POST",
       body: JSON.stringify(params || {}),
     });
+  },
+
+  functions: {
+    invoke(name: string, options: { body?: unknown } = {}) {
+      return apiFetch(`/functions/${name}`, {
+        method: "POST",
+        body: JSON.stringify(options.body || {}),
+      });
+    },
   },
 
   auth: {
@@ -229,6 +262,10 @@ export const supabase = {
       return { data: { session: nextSession }, error: null };
     },
 
+    async refreshSession() {
+      return this.getSession();
+    },
+
     async getUser() {
       const { data, error } = await this.getSession();
       return { data: { user: data.session?.user || null }, error };
@@ -240,7 +277,7 @@ export const supabase = {
         body: JSON.stringify({
           email,
           password,
-          name: options?.data?.name,
+          name: options?.data?.full_name || options?.data?.name,
           organizationName: options?.data?.organization_name,
           telefone: options?.data?.telefone,
         }),

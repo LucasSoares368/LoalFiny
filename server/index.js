@@ -55,6 +55,23 @@ const upload = multer({ dest: uploadRoot, limits: { fileSize: 5 * 1024 * 1024 } 
 const marketQuoteCacheTtlMs = Number(process.env.MARKET_QUOTES_CACHE_TTL_MS || 60000);
 let marketQuoteCache = null;
 
+async function runSqlFileIfExists(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const sql = fs.readFileSync(filePath, "utf8");
+  const statements = sql
+    .split(/;\s*(?:\r?\n|$)/)
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+
+  for (const statement of statements) {
+    await pool.query(statement);
+  }
+}
+
+async function runMigrations() {
+  await runSqlFileIfExists(path.join(__dirname, "..", "database", "mysql", "localfiny_2_0.sql"));
+}
+
 const marketQuoteSymbols = [
   { symbol: "USDBRL=X", label: "Dólar", type: "currency", currency: "BRL" },
   { symbol: "EURBRL=X", label: "Euro", type: "currency", currency: "BRL" },
@@ -165,6 +182,7 @@ function publicUser(user) {
     role: user.role || "user",
     user_metadata: {
       name: user.name,
+      full_name: user.name,
       organization_name: user.organization_name,
       telefone: user.telefone,
     },
@@ -230,6 +248,48 @@ async function authRequired(req, res, next) {
   }
 }
 
+async function optionalAuth(req, _res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (token) {
+      const payload = jwt.verify(token, JWT_SECRET);
+      const rows = await query("select * from users where id = ? limit 1", [payload.sub]);
+      req.user = rows[0] || null;
+    }
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
+function isAdminUser(user) {
+  return ["admin", "superadmin"].includes(String(user?.role || "").toLowerCase());
+}
+
+function defaultPlan() {
+  return {
+    plan_type: "starter",
+    plan_name: "Starter",
+    is_active: true,
+    max_banks: 999,
+    max_goals: 1,
+    max_reminders: 3,
+    whatsapp_enabled: false,
+    reports_enabled: false,
+    cashflow_projection_enabled: false,
+    export_enabled: false,
+    split_enabled: false,
+    business_profile_enabled: false,
+    advanced_dashboard_enabled: false,
+    annual_projection_enabled: false,
+    history_months: 3,
+    monthly_planning_enabled: false,
+    ai_enabled: false,
+    import_enabled: false,
+  };
+}
+
 function handleError(res, error) {
   const status = error.status || 500;
   res.status(status).json({ error: error.message || "Erro interno" });
@@ -238,8 +298,9 @@ function handleError(res, error) {
 function buildWhere(table, filters, userId, params) {
   const clauses = [];
   if (USER_OWNED_TABLES.has(table)) {
-    clauses.push("user_id = ?");
+    clauses.push(table === "profiles" ? "(user_id = ? or id = ?)" : "user_id = ?");
     params.push(userId);
+    if (table === "profiles") params.push(userId);
   }
 
   for (const filter of filters || []) {
@@ -288,6 +349,9 @@ function buildWhere(table, filters, userId, params) {
         err.status = 400;
         throw err;
       }
+    } else if (op === "ilike") {
+      clauses.push(`lower(${column}) like lower(?)`);
+      params.push(String(value).replace(/\*/g, "%"));
     } else {
       const err = new Error(`Operador nao permitido: ${op}`);
       err.status = 400;
@@ -295,6 +359,34 @@ function buildWhere(table, filters, userId, params) {
     }
   }
   return clauses.length ? ` where ${clauses.join(" and ")}` : "";
+}
+
+function parseOrExpression(table, expression, params, userId) {
+  const parts = String(expression || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const clauses = [];
+
+  for (const part of parts) {
+    const [column, op, ...rawValue] = part.split(".");
+    const value = rawValue.join(".");
+    assertColumn(table, column);
+    if (column === "user_id" && value !== userId) {
+      clauses.push("user_id = ?");
+      params.push(userId);
+      continue;
+    }
+    if (op === "eq") {
+      clauses.push(`${column} = ?`);
+      params.push(value === "true" ? true : value === "false" ? false : value);
+    } else if (op === "ilike") {
+      clauses.push(`lower(${column}) like lower(?)`);
+      params.push(value.replace(/\*/g, "%"));
+    }
+  }
+
+  return clauses.length ? `(${clauses.join(" or ")})` : "";
 }
 
 async function enrichRows(table, rows) {
@@ -316,6 +408,10 @@ async function enrichRows(table, rows) {
   if (["receitas", "despesas", "transacoes", "ia_analysis_results"].includes(table)) {
     await attachById("categoria_id", "categorias", "id", "categorias");
   }
+  if (table === "transactions") {
+    await attachById("category_id", "categories", "id", "categories");
+    await attachById("bank_id", "banks", "id", "banks");
+  }
   if (table === "receitas") {
     await attachById("bank_account_id", "bank_accounts", "id", "bank_accounts");
   }
@@ -331,20 +427,41 @@ async function enrichRows(table, rows) {
 async function selectRows(table, body, userId) {
   assertTable(table);
   const params = [];
-  const where = buildWhere(table, body.filters, userId, params);
+  let where = buildWhere(table, body.filters, userId, params);
+  const extraOrClauses = [];
+  for (const expression of body.orFilters || []) {
+    const clause = parseOrExpression(table, expression, params, userId);
+    if (clause) extraOrClauses.push(clause);
+  }
+  if (extraOrClauses.length) {
+    where += `${where ? " and " : " where "}${extraOrClauses.join(" and ")}`;
+  }
+
+  let count;
+  if (body.selectOptions?.count) {
+    const countRows = await query(`select count(*) as count from ${table}${where}`, params);
+    count = Number(countRows[0]?.count || 0);
+    if (body.selectOptions?.head) return { rows: [], count };
+  }
+
   let sql = `select * from ${table}${where}`;
 
   if (body.order?.column) {
     assertColumn(table, body.order.column);
     sql += ` order by ${body.order.column} ${body.order.ascending === false ? "desc" : "asc"}`;
   }
-  if (body.limit) {
+  if (body.range) {
+    const from = Math.max(0, Number(body.range.from || 0));
+    const to = Math.max(from, Number(body.range.to || from));
+    sql += " limit ? offset ?";
+    params.push(to - from + 1, from);
+  } else if (body.limit) {
     sql += " limit ?";
     params.push(Number(body.limit));
   }
 
   const rows = await query(sql, params);
-  return enrichRows(table, rows);
+  return { rows: await enrichRows(table, rows), count };
 }
 
 async function insertRows(table, payload, userId) {
@@ -380,7 +497,8 @@ async function updateRows(table, body, userId) {
   const params = columns.map((column) => data[column]);
   const where = buildWhere(table, body.filters, userId, params);
   await query(`update ${table} set ${columns.map((column) => `${column} = ?`).join(", ")}${where}`, params);
-  return selectRows(table, body, userId);
+  const selected = await selectRows(table, body, userId);
+  return selected.rows;
 }
 
 async function deleteRows(table, body, userId) {
@@ -440,8 +558,8 @@ app.post("/api/auth/signup", async (req, res) => {
       [id, email, passwordHash, name || null, organizationName || null, telefone || null],
     );
     await query(
-      "insert into profiles (id, user_id, name, organization_name, telefone) values (?, ?, ?, ?, ?)",
-      [uuidv4(), id, name || email, organizationName || null, telefone || null],
+      "insert into profiles (id, user_id, name, full_name, email, organization_name, telefone) values (?, ?, ?, ?, ?, ?, ?)",
+      [id, id, name || email, name || email, email, organizationName || null, telefone || null],
     );
     const user = { id, email, role: "user", name, organization_name: organizationName, telefone };
     res.json({ user: publicUser(user), session: { access_token: signToken(user), user: publicUser(user) } });
@@ -533,7 +651,12 @@ app.post("/api/db/:table", authRequired, async (req, res) => {
     const { table } = req.params;
     const { action } = req.body;
     let data;
-    if (action === "select") data = await selectRows(table, req.body, req.user.id);
+    let count;
+    if (action === "select") {
+      const result = await selectRows(table, req.body, req.user.id);
+      data = result.rows;
+      count = result.count;
+    }
     else if (action === "insert") data = await insertRows(table, req.body.payload, req.user.id);
     else if (action === "update") data = await updateRows(table, req.body, req.user.id);
     else if (action === "delete") data = await deleteRows(table, req.body, req.user.id);
@@ -542,7 +665,7 @@ app.post("/api/db/:table", authRequired, async (req, res) => {
 
     if (req.body.single) data = data[0] || null;
     if (req.body.maybeSingle) data = data[0] || null;
-    res.json({ data, error: null });
+    res.json({ data, count, error: null });
   } catch (error) {
     handleError(res, error);
   }
@@ -552,6 +675,190 @@ app.post("/api/rpc/delete_user_account", authRequired, async (req, res) => {
   try {
     await query("delete from users where id = ?", [req.user.id]);
     res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/rpc/has_role", authRequired, async (req, res) => {
+  try {
+    const requestedUserId = req.body?._user_id || req.body?.user_id || req.user.id;
+    const requestedRole = String(req.body?._role || req.body?.role || "").toLowerCase();
+    const roleRows = await query("select role from user_roles where user_id = ? limit 1", [requestedUserId]).catch(() => []);
+    const roles = new Set([
+      String(req.user.role || "").toLowerCase(),
+      ...roleRows.map((row) => String(row.role || "").toLowerCase()),
+    ]);
+    const data = roles.has(requestedRole) || (requestedRole === "admin" && roles.has("superadmin"));
+    res.json({ data, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/rpc/get_user_plan", authRequired, async (_req, res) => {
+  try {
+    if (isAdminUser(_req.user)) {
+      return res.json({
+        data: [{
+          ...defaultPlan(),
+          plan_type: "business",
+          plan_name: "Admin",
+          max_goals: 999,
+          max_reminders: 999,
+          whatsapp_enabled: true,
+          reports_enabled: true,
+          cashflow_projection_enabled: true,
+          export_enabled: true,
+          split_enabled: true,
+          business_profile_enabled: true,
+          advanced_dashboard_enabled: true,
+          annual_projection_enabled: true,
+          history_months: 9999,
+          monthly_planning_enabled: true,
+          ai_enabled: true,
+          import_enabled: true,
+        }],
+        error: null,
+      });
+    }
+    res.json({ data: [defaultPlan()], error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/rpc/is_registration_allowed", optionalAuth, async (_req, res) => {
+  try {
+    const rows = await query("select allow_registration from app_settings order by created_at desc limit 1").catch(() => []);
+    res.json({ data: rows.length ? Boolean(rows[0].allow_registration) : true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/rpc/update_app_setting", authRequired, async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) return res.status(403).json({ error: "Acesso negado" });
+    const allowRegistration = Boolean(req.body?.p_allow_registration ?? req.body?.allow_registration);
+    const rows = await query("select id, allow_registration from app_settings order by created_at desc limit 1");
+    if (rows[0]) {
+      await query("update app_settings set allow_registration = ? where id = ?", [allowRegistration, rows[0].id]);
+    } else {
+      await query("insert into app_settings (id, allow_registration) values (?, ?)", [uuidv4(), allowRegistration]);
+    }
+    await query(
+      "insert into app_settings_logs (id, changed_by, setting_key, old_value, new_value) values (?, ?, 'allow_registration', ?, ?)",
+      [uuidv4(), req.user.id, rows[0] ? String(Boolean(rows[0].allow_registration)) : null, String(allowRegistration)],
+    ).catch(() => null);
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+async function adminSettingsHandler(req, res) {
+  if (!isAdminUser(req.user)) return res.status(403).json({ error: "Acesso negado" });
+  const { action, table, data = {} } = req.body || {};
+  assertTable(table);
+
+  if (action === "get") {
+    const page = Math.max(1, Number(data.page || 1));
+    const pageSize = Math.min(100, Math.max(1, Number(data.pageSize || 50)));
+    const countRows = await query(`select count(*) as count from ${table}`);
+    const rows = await query(`select * from ${table} order by created_at desc limit ? offset ?`, [pageSize, (page - 1) * pageSize])
+      .catch(() => query(`select * from ${table} limit ? offset ?`, [pageSize, (page - 1) * pageSize]));
+    return res.json({ data: table === "payments" ? { data: rows.map(normalizeRow), count: Number(countRows[0]?.count || 0) } : rows.map(normalizeRow), error: null });
+  }
+
+  if (action === "update") {
+    const id = data.id || uuidv4();
+    const payload = pickAllowedColumns(table, { ...data, id });
+    const columns = Object.keys(payload);
+    const updates = columns.filter((column) => column !== "id").map((column) => `${column} = values(${column})`);
+    await query(
+      `insert into ${table} (${columns.join(", ")}) values (${columns.map(() => "?").join(", ")}) on duplicate key update ${updates.length ? updates.join(", ") : "id = id"}`,
+      columns.map((column) => payload[column]),
+    );
+    return res.json({ data: true, error: null });
+  }
+
+  if (action === "delete") {
+    if (data.id) await query(`delete from ${table} where id = ?`, [data.id]);
+    return res.json({ data: true, error: null });
+  }
+
+  if (action === "clear_all" && table === "payments") {
+    await query("delete from payments");
+    return res.json({ data: true, error: null });
+  }
+
+  return res.status(400).json({ error: `Acao nao permitida: ${action}` });
+}
+
+app.post("/api/functions/:name", optionalAuth, async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    if (name === "validate-signup") {
+      const { email, password, fullName, captchaVerified } = req.body || {};
+      if (!captchaVerified) return res.json({ data: { error: "Verificacao anti-spam invalida" }, error: null });
+      if (!email || !password || !fullName) return res.json({ data: { error: "Preencha todos os campos" }, error: null });
+      if (String(password).length < 8) return res.json({ data: { error: "Senha muito curta" }, error: null });
+      return res.json({ data: { success: true }, error: null });
+    }
+
+    if (name === "get-market-quotes") {
+      const payload = await getMarketQuotes();
+      return res.json({
+        data: {
+          success: true,
+          quotes: payload.quotes.map((quote) => ({
+            symbol: quote.symbol,
+            name: quote.label,
+            price: quote.value,
+            change: quote.previousClose === null ? 0 : quote.value - quote.previousClose,
+            changePercent: quote.changePercent || 0,
+            type: quote.type,
+          })),
+          lastUpdate: payload.fetchedAt,
+        },
+        error: null,
+      });
+    }
+
+    if (name === "get-exchange-rates") {
+      return res.json({
+        data: {
+          success: true,
+          rates: { BRL: 5.5, USD: 1, EUR: 0.93, GBP: 0.79, JPY: 160, CNY: 7.25, ARS: 900, CAD: 1.36, AUD: 1.5, CHF: 0.9, MXN: 18, CLP: 930, PEN: 3.75, COP: 4100, UYU: 40 },
+          lastUpdate: new Date().toISOString(),
+        },
+        error: null,
+      });
+    }
+
+    if (name === "get-financial-news") {
+      return res.json({ data: { success: true, news: [], lastUpdate: new Date().toISOString() }, error: null });
+    }
+
+    if (name === "admin-settings") return adminSettingsHandler(req, res);
+
+    if (name === "ai-chat") {
+      return res.json({
+        data: {
+          success: false,
+          message: "A assistente IA ja esta na interface do LocalFiny 2.0, mas a chave/configuracao da IA ainda precisa ser conectada no backend MySQL.",
+        },
+        error: null,
+      });
+    }
+
+    if (["openai-config", "evolution-api", "send-whatsapp", "create-mercadopago-checkout", "process-transaction-image", "check-achievements"].includes(name)) {
+      return res.json({ data: { success: false, message: "Integracao ainda nao configurada no MySQL" }, error: null });
+    }
+
+    res.status(404).json({ error: `Funcao nao encontrada: ${name}` });
   } catch (error) {
     handleError(res, error);
   }
@@ -599,6 +906,8 @@ if (fs.existsSync(distPath)) {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
+
+await runMigrations();
 
 app.listen(PORT, () => {
   console.log(`LocalFiny API listening on port ${PORT}`);

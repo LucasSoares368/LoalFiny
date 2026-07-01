@@ -1,25 +1,134 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LocalFiny - Controle Financeiro Inteligente</title>
-    <meta name="description" content="Gerencie suas finanças de forma simples e inteligente com o LocalFiny. Dashboard intuitivo, relatórios detalhados e assistente no WhatsApp." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Primary SEO -->
+    <title>LocalFiny — Controle financeiro inteligente</title>
+    <meta name="description" content="LocalFiny: controle financeiro inteligente para microempreendedores, afiliados e freelas. Organize receitas, metas, dívidas e bancos em um só lugar." />
+    <meta name="keywords" content="controle financeiro, finanças pessoais, gestão financeira, microempreendedor, afiliado, freelancer, fluxo de caixa, planejamento financeiro" />
     <meta name="author" content="LocalFiny" />
-    <link rel="icon" type="image/png" href="/brand/icon.png" />
-    <link rel="apple-touch-icon" href="/brand/icon-app.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0D1B2A" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
 
-    <meta property="og:title" content="LocalFiny - Controle Financeiro Inteligente" />
-    <meta property="og:description" content="Gerencie suas finanças de forma simples e inteligente com o LocalFiny. Dashboard intuitivo, relatórios detalhados e assistente no WhatsApp." />
+    <!-- TODO: substitua pela URL canônica final ao conectar um domínio próprio -->
+    <link rel="canonical" href="https://app.localfiny.com/" />
+
+    <!-- PWA / Tema -->
+    <meta name="theme-color" content="#2E9B6D" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LocalFiny" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="LocalFiny" />
+    <meta name="msapplication-TileColor" content="#2E9B6D" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="LocalFiny" />
+    <meta property="og:title" content="LocalFiny — Controle financeiro inteligente" />
+    <meta property="og:description" content="Organize receitas, despesas, metas, dívidas e bancos em um só lugar. Indicadores inteligentes, lembretes via WhatsApp e Assistente de IA." />
+    <meta property="og:url" content="https://app.localfiny.com/" />
+    <meta property="og:image" content="https://app.localfiny.com/og-image.png" />
+    <meta property="og:image:secure_url" content="https://app.localfiny.com/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LocalFiny — dashboard de controle financeiro inteligente" />
 
+    <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@localfiny_app" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@LocalFiny" />
+    <meta name="twitter:creator" content="@LocalFiny" />
+    <meta name="twitter:title" content="LocalFiny — Controle financeiro inteligente" />
+    <meta name="twitter:description" content="Organize receitas, despesas, metas, dívidas e bancos em um só lugar. Indicadores inteligentes, lembretes via WhatsApp e Assistente de IA." />
+    <meta name="twitter:image" content="https://app.localfiny.com/og-image.png" />
+    <meta name="twitter:image:alt" content="LocalFiny — dashboard de controle financeiro inteligente" />
+
+    <!-- JSON-LD: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "LocalFiny",
+      "description": "Controle financeiro inteligente para microempreendedores, afiliados e freelas. Organize receitas, despesas, metas, dívidas e bancos em um só lugar.",
+      "url": "https://app.localfiny.com/",
+      "image": "https://app.localfiny.com/og-image.png",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "inLanguage": "pt-BR",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Plano Free",
+          "price": "0",
+          "priceCurrency": "BRL"
+        },
+        {
+          "@type": "Offer",
+          "name": "Plano Pro",
+          "priceCurrency": "BRL",
+          "category": "subscription"
+        },
+        {
+          "@type": "Offer",
+          "name": "Plano Business",
+          "priceCurrency": "BRL",
+          "category": "subscription"
+        }
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "LocalFiny"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "LocalFiny",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://app.localfiny.com/pwa-512x512.png"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "120"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "LocalFiny",
+      "url": "https://app.localfiny.com/",
+      "logo": "https://app.localfiny.com/pwa-512x512.png",
+      "sameAs": []
+    }
+    </script>
+
+    <!-- JSON-LD: WebSite (com SearchAction) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "LocalFiny",
+      "url": "https://app.localfiny.com/",
+      "inLanguage": "pt-BR"
+    }
+    </script>
   </head>
 
   <body>

@@ -1,20 +1,18 @@
-import { createRoot } from 'react-dom/client'
-import { QueryClientProvider } from "@tanstack/react-query"
-import App from './App.tsx'
-import './index.css'
-import { queryClient } from "./lib/queryClient"
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
 
-const savedTheme = localStorage.getItem("theme");
-const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+// Exemplo de como reagir ao consentimento de cookies para carregar scripts externos
+window.addEventListener('cookieConsentUpdated', (event: any) => {
+  const preferences = event.detail;
+  if (preferences.analytical) {
+    console.log('LGPD: Carregando scripts analíticos (GA, etc.)...');
+    // window.loadGoogleAnalytics();
+  }
+  if (preferences.marketing) {
+    console.log('LGPD: Carregando scripts de marketing (Pixel, etc.)...');
+    // window.loadFacebookPixel();
+  }
+});
 
-if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
-  document.documentElement.classList.add("dark");
-} else {
-  document.documentElement.classList.remove("dark");
-}
-
-createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <App />
-  </QueryClientProvider>
-);
+createRoot(document.getElementById("root")!).render(<App />);
