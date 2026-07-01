@@ -62,6 +62,14 @@ interface Goal {
   profile_type: "personal" | "business";
 }
 
+interface Bank {
+  id: string;
+  name: string;
+  account_type: string;
+  current_balance: number;
+  is_active: boolean;
+}
+
 const goalSchema = z.object({
   name: z.string().trim().min(3, "Nome muito curto").max(100, "Nome muito longo"),
   description: z.string().max(500, "Descrição muito longa").optional(),
@@ -98,6 +106,16 @@ const toNumber = (value: unknown) => {
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const getToday = () => new Date().toISOString().split("T")[0];
+const getCurrentTime = () => new Date().toTimeString().slice(0, 5);
 
 const normalizeGoal = (goal: any): Goal => ({
   ...goal,
@@ -175,7 +193,14 @@ const Goals = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
-  const [quickAmounts, setQuickAmounts] = useState<Record<string, number>>({});
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [banksLoading, setBanksLoading] = useState(true);
+  const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
+  const [contributionAmount, setContributionAmount] = useState(0);
+  const [contributionBankId, setContributionBankId] = useState("");
+  const [contributionPaymentMethod, setContributionPaymentMethod] = useState("pix");
+  const [contributionNotes, setContributionNotes] = useState("");
+  const [contributionSaving, setContributionSaving] = useState(false);
   const { plan, usage, loading: planLoading, canAddGoal, canUseBusinessProfile, refetch: refetchPlan } = useUserPlan();
   const [formData, setFormData] = useState(emptyForm);
 
@@ -216,6 +241,40 @@ const Goals = () => {
   useEffect(() => {
     loadGoals();
   }, [loadGoals]);
+
+  const loadBanks = useCallback(async () => {
+    try {
+      setBanksLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("banks")
+        .select("id, name, account_type, current_balance, is_active")
+        .eq("user_id", user.id)
+        .eq("profile_type", currentProfile)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+
+      setBanks((data || []).map((bank: any) => ({
+        id: bank.id,
+        name: bank.name || "Banco",
+        account_type: bank.account_type || "checking",
+        current_balance: toNumber(bank.current_balance),
+        is_active: bank.is_active !== false && bank.is_active !== 0,
+      })));
+    } catch (error: any) {
+      toast.error("Erro ao carregar bancos: " + error.message);
+    } finally {
+      setBanksLoading(false);
+    }
+  }, [currentProfile]);
+
+  useEffect(() => {
+    loadBanks();
+  }, [loadBanks]);
 
   const filteredGoals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -363,6 +422,113 @@ const Goals = () => {
     }
   };
 
+  const getGoalsCategoryId = async (userId: string) => {
+    const { data: categories, error } = await supabase
+      .from("categories")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    const existing = (categories || []).find((category: any) => normalizeText(category.name || "") === "metas");
+    if (existing?.id) return existing.id;
+
+    const { data: createdCategory, error: createError } = await supabase
+      .from("categories")
+      .insert({
+        user_id: userId,
+        name: "Metas",
+        icon: "🎯",
+        color: "#ff6a00",
+        profile_type: currentProfile,
+      })
+      .select("id")
+      .single();
+
+    if (createError) throw createError;
+    return createdCategory?.id || null;
+  };
+
+  const openContributionDialog = (goal: Goal) => {
+    const onlyBank = banks.length === 1 ? banks[0] : null;
+    setContributionGoal(goal);
+    setContributionAmount(0);
+    setContributionBankId(onlyBank?.id || "");
+    setContributionPaymentMethod(onlyBank?.account_type === "credit_card" ? "credit_card" : "pix");
+    setContributionNotes("");
+  };
+
+  const handleContributionSubmit = async () => {
+    if (!contributionGoal) return;
+
+    if (!Number.isFinite(contributionAmount) || contributionAmount <= 0) {
+      toast.error("Informe um valor maior que zero");
+      return;
+    }
+
+    if (!contributionBankId) {
+      toast.error("Selecione o banco ou cartão da meta");
+      return;
+    }
+
+    try {
+      setContributionSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não encontrado");
+
+      const selectedBank = banks.find((bank) => bank.id === contributionBankId);
+      if (!selectedBank) throw new Error("Banco selecionado não encontrado");
+
+      const newAmount = Math.min(contributionGoal.current_amount + contributionAmount, contributionGoal.target_amount);
+      const isCompleted = newAmount >= contributionGoal.target_amount;
+      const categoryId = await getGoalsCategoryId(user.id);
+
+      const { error: transactionError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        amount: contributionAmount,
+        type: "expense",
+        category_id: categoryId,
+        description: contributionNotes.trim()
+          ? `Aporte em meta: ${contributionGoal.name} - ${contributionNotes.trim()}`
+          : `Aporte em meta: ${contributionGoal.name}`,
+        date: getToday(),
+        transaction_time: getCurrentTime(),
+        profile_type: currentProfile,
+        bank_id: contributionBankId,
+        payment_method: contributionPaymentMethod,
+        is_essential: false,
+      });
+
+      if (transactionError) throw transactionError;
+
+      const { error: bankError } = await supabase
+        .from("banks")
+        .update({ current_balance: selectedBank.current_balance - contributionAmount })
+        .eq("id", contributionBankId);
+
+      if (bankError) throw bankError;
+
+      const { error: goalError } = await supabase
+        .from("custom_goals")
+        .update({
+          current_amount: newAmount,
+          is_completed: isCompleted,
+          completed_at: isCompleted ? new Date().toISOString() : null,
+        })
+        .eq("id", contributionGoal.id);
+
+      if (goalError) throw goalError;
+
+      toast.success(isCompleted ? "Meta concluída!" : "Aporte registrado na meta!");
+      setContributionGoal(null);
+      await Promise.all([loadGoals(), loadBanks()]);
+    } catch (error: any) {
+      toast.error("Erro ao registrar aporte: " + error.message);
+    } finally {
+      setContributionSaving(false);
+    }
+  };
+
   const shouldShowLimit =
     !planLoading &&
     Number(plan.max_goals || 0) < 999 &&
@@ -447,21 +613,13 @@ const Goals = () => {
         </div>
 
         {!goal.is_completed && (
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <CurrencyInput
-              value={quickAmounts[goal.id] || 0}
-              onChange={(value) => setQuickAmounts((prev) => ({ ...prev, [goal.id]: value }))}
-              placeholder="Adicionar valor"
-              className="h-11 rounded-2xl"
-            />
-            <Button
-              onClick={() => handleUpdateProgress(goal, quickAmounts[goal.id] || 0)}
-              className="h-11 rounded-2xl px-6 font-semibold"
-            >
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Atualizar
-            </Button>
-          </div>
+          <Button
+            onClick={() => openContributionDialog(goal)}
+            className="mt-5 h-11 w-full rounded-2xl px-6 font-semibold"
+          >
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Adicionar Valor
+          </Button>
         )}
       </div>
     );
@@ -676,6 +834,97 @@ const Goals = () => {
                 "Atualizar"
               ) : (
                 "Criar Meta"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!contributionGoal} onOpenChange={(open) => !open && setContributionGoal(null)}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Adicionar Valor</DialogTitle>
+            <DialogDescription>
+              {contributionGoal ? `Registre um aporte para ${contributionGoal.name}.` : "Registre um aporte na meta."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            <div className="space-y-2">
+              <Label>Banco/Cartão *</Label>
+              <Select
+                value={contributionBankId}
+                onValueChange={(value) => {
+                  const bank = banks.find((item) => item.id === value);
+                  setContributionBankId(value);
+                  if (bank?.account_type === "credit_card") {
+                    setContributionPaymentMethod("credit_card");
+                  }
+                }}
+                disabled={banksLoading}
+              >
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue placeholder={banksLoading ? "Carregando..." : "Selecione de onde saiu o valor"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      {bank.name} - {formatCurrency(bank.current_balance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor *</Label>
+              <CurrencyInput
+                value={contributionAmount}
+                onChange={setContributionAmount}
+                placeholder="0,00"
+                className="h-11 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Meio de Pagamento</Label>
+              <Select value={contributionPaymentMethod} onValueChange={setContributionPaymentMethod}>
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">Pix</SelectItem>
+                  <SelectItem value="debit_card">Débito</SelectItem>
+                  <SelectItem value="credit_card">Crédito</SelectItem>
+                  <SelectItem value="bank_transfer">Transferência</SelectItem>
+                  <SelectItem value="cash">Dinheiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={contributionNotes}
+                onChange={(event) => setContributionNotes(event.target.value)}
+                placeholder="Anotações sobre este aporte..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setContributionGoal(null)} disabled={contributionSaving} className="h-11 rounded-2xl">
+              Cancelar
+            </Button>
+            <Button onClick={handleContributionSubmit} disabled={contributionSaving} className="h-11 rounded-2xl font-semibold">
+              {contributionSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Registrar"
               )}
             </Button>
           </DialogFooter>
