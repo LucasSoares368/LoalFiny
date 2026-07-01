@@ -43,6 +43,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { FinancialProfile } from "@/components/dashboard/ProfileSwitcher";
 import { useUserPlan } from "@/hooks/useUserPlan";
 
 interface Goal {
@@ -58,6 +59,7 @@ interface Goal {
   is_completed: boolean;
   completed_at: string | null;
   created_at: string;
+  profile_type: "personal" | "business";
 }
 
 const goalSchema = z.object({
@@ -109,6 +111,7 @@ const normalizeGoal = (goal: any): Goal => ({
   icon: goal?.icon || "M",
   is_completed: goal?.is_completed === true || goal?.is_completed === 1,
   completed_at: goal?.completed_at || null,
+  profile_type: goal?.profile_type === "business" ? "business" : "personal",
 });
 
 const calculateProgress = (current: number, target: number) => {
@@ -166,13 +169,14 @@ const Goals = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [currentProfile, setCurrentProfile] = useState<FinancialProfile>("personal");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [quickAmounts, setQuickAmounts] = useState<Record<string, number>>({});
-  const { plan, usage, loading: planLoading, canAddGoal, refetch: refetchPlan } = useUserPlan();
+  const { plan, usage, loading: planLoading, canAddGoal, canUseBusinessProfile, refetch: refetchPlan } = useUserPlan();
   const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
@@ -197,13 +201,17 @@ const Goals = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setGoals((data || []).map(normalizeGoal));
+      setGoals(
+        (data || [])
+          .map(normalizeGoal)
+          .filter((goal) => goal.profile_type === currentProfile),
+      );
     } catch (error: any) {
       toast.error("Erro ao carregar metas: " + error.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentProfile]);
 
   useEffect(() => {
     loadGoals();
@@ -282,6 +290,7 @@ const Goals = () => {
         deadline: validatedData.deadline || null,
         category: validatedData.category || "Outro",
         user_id: user.id,
+        profile_type: currentProfile,
         color: categoryData?.color || "#ff6a00",
         icon: categoryData?.icon || "M",
         is_completed: isCompleted,
@@ -458,8 +467,19 @@ const Goals = () => {
     );
   };
 
+  const handleProfileChange = (profile: FinancialProfile) => {
+    if (profile === "business" && planLoading) return;
+    if (profile === "business" && !canUseBusinessProfile()) return;
+    setCurrentProfile(profile);
+  };
+
   return (
-    <AppLayout title="Metas">
+    <AppLayout
+      title="Metas"
+      showProfileSwitcher
+      currentProfile={currentProfile}
+      onProfileChange={handleProfileChange}
+    >
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">

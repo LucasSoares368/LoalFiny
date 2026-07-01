@@ -113,7 +113,7 @@ const AppLayoutContent = ({
 }: AppLayoutContentProps) => {
   const { state } = useSidebar();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const { canUseBusinessProfile } = useUserPlan();
+  const { canUseBusinessProfile, loading: planLoading } = useUserPlan();
 
   const userInitial = useMemo(() => {
     return user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U";
@@ -150,6 +150,9 @@ const AppLayoutContent = ({
               <ProfileSwitcher
                 currentProfile={currentProfile}
                 onProfileChange={(profile) => {
+                  if (profile === "business" && planLoading) {
+                    return;
+                  }
                   if (profile === "business" && !canUseBusinessProfile()) {
                     setShowUpgradeModal(true);
                     return;
