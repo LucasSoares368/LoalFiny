@@ -1,10 +1,10 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { FinancialCalculator } from "@/components/FinancialCalculator";
 import { CookieConsentProvider } from "@/contexts/CookieConsentContext";
@@ -57,6 +57,40 @@ const queryClient = new QueryClient({
   },
 });
 
+const APP_HOSTS = new Set(["app.localfiny.com"]);
+
+const isAppHost = () => APP_HOSTS.has(window.location.hostname.toLowerCase());
+
+const RootRoute = () => {
+  const navigate = useNavigate();
+  const [checkingSession, setCheckingSession] = useState(isAppHost());
+
+  useEffect(() => {
+    if (!isAppHost()) return;
+
+    let mounted = true;
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        navigate(session ? "/dashboard" : "/auth", { replace: true });
+      })
+      .finally(() => {
+        if (mounted) setCheckingSession(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  if (isAppHost()) {
+    return checkingSession ? <PageLoader /> : null;
+  }
+
+  return <Landing />;
+};
+
 const App = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -82,7 +116,7 @@ const App = () => {
         <HashRouter>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<RootRoute />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/transactions" element={<Transactions />} />
