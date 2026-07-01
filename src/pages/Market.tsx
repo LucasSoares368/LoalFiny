@@ -157,18 +157,18 @@ const Market = () => {
           transition={{ duration: 0.35 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="overflow-x-auto pb-1">
-              <TabsList className="inline-grid min-w-max grid-cols-6 gap-1 rounded-2xl bg-muted/70 p-1">
+            <div className="max-w-full overflow-hidden">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted/70 p-1 sm:grid-cols-3 xl:grid-cols-6">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   return (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="h-11 rounded-xl px-4 text-sm font-bold data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                      className="h-11 min-w-0 rounded-xl px-3 text-sm font-bold data-[state=active]:bg-card data-[state=active]:shadow-sm"
                     >
-                      <Icon className="mr-2 h-4 w-4" />
-                      {tab.label}
+                      <Icon className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">{tab.label}</span>
                     </TabsTrigger>
                   );
                 })}
