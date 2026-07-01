@@ -35,6 +35,14 @@ const formatCurrency = (value: number) =>
 
 const maskMoney = "••••••";
 
+const monthNamesShort = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+const formatChartMoney = (value: number) => {
+  const abs = Math.abs(value);
+  if (abs >= 1000) return `R$ ${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+};
+
 const percentOfTotal = (value: number, total: number) => (total > 0 ? (value / total) * 100 : 0);
 
 const formatMarketValue = (quote: MarketQuote) => {
@@ -162,6 +170,38 @@ const Dashboard = () => {
   const businessExpense = 0;
   const totalIncomeDistribution = data.receitas + businessIncome;
   const totalExpenseDistribution = data.despesas + businessExpense;
+  const cashFlowData = useMemo(() => {
+    const nowDate = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(nowDate.getFullYear(), nowDate.getMonth() - 5 + index, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const monthTransactions = transacoes.filter((item) => item.data.slice(0, 7) === monthKey);
+      const receitas = monthTransactions
+        .filter((item) => item.tipo === "receita")
+        .reduce((sum, item) => sum + Number(item.valor || 0), 0);
+      const despesas = monthTransactions
+        .filter((item) => item.tipo === "despesa")
+        .reduce((sum, item) => sum + Number(item.valor || 0), 0);
+
+      return { label: monthNamesShort[date.getMonth()], receitas, despesas };
+    });
+  }, [transacoes]);
+
+  const balanceEvolutionData = useMemo(() => {
+    let runningBalance = totalBankBalance;
+    return [...transacoes]
+      .sort((a, b) => a.data.localeCompare(b.data))
+      .slice(-12)
+      .map((item) => {
+        const value = Number(item.valor || 0);
+        runningBalance += item.tipo === "receita" ? value : -value;
+        const date = new Date(`${item.data.split("T")[0]}T00:00:00`);
+        return {
+          label: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          saldo: runningBalance,
+        };
+      });
+  }, [totalBankBalance, transacoes]);
 
   return (
     <DashboardLayout>
@@ -361,12 +401,16 @@ const Dashboard = () => {
 
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={LineChart} title="Fluxo de caixa mensal" subtitle="Evolução de receitas e despesas nos últimos meses" />
-            <SimpleChart receitas={data.receitas} despesas={data.despesas} />
+            <CashFlowChart data={cashFlowData} hideValues={hideValues} />
           </Card>
 
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
             <SectionTitle icon={TrendingUp} title="Evolução do saldo" subtitle="Acompanhe como seu saldo evolui ao longo do tempo" />
-            <EmptyState text={loadingTransacoes ? "Carregando transações..." : "Nenhuma transação registrada ainda"} />
+            {balanceEvolutionData.length ? (
+              <BalanceEvolutionChart data={balanceEvolutionData} hideValues={hideValues} />
+            ) : (
+              <EmptyState text={loadingTransacoes ? "Carregando transações..." : "Nenhuma transação registrada ainda"} />
+            )}
           </Card>
 
           <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
@@ -647,6 +691,110 @@ const SummaryRow = ({ label, value, tone, hideValues }: { label: string; value: 
     <span className="text-sm font-bold text-slate-500">0.0%</span>
   </div>
 );
+
+const CashFlowChart = ({
+  data,
+  hideValues,
+}: {
+  data: Array<{ label: string; receitas: number; despesas: number }>;
+  hideValues: boolean;
+}) => {
+  const max = Math.max(...data.flatMap((item) => [item.receitas, item.despesas]), 1);
+  const ticks = [max, max * 0.5, 0];
+
+  return (
+    <div className="mt-8">
+      <div className="grid h-64 grid-cols-[64px_1fr] grid-rows-[1fr_28px]">
+        <div className="relative border-r border-slate-300">
+          {ticks.map((tick, index) => (
+            <span key={index} className="absolute right-3 -translate-y-1/2 text-xs text-slate-500" style={{ top: `${(index / (ticks.length - 1)) * 100}%` }}>
+              {hideValues ? maskMoney : formatChartMoney(tick)}
+            </span>
+          ))}
+        </div>
+        <div className="relative border-b border-slate-300">
+          {ticks.map((_, index) => (
+            <div key={index} className="absolute left-0 right-0 border-t border-dashed border-slate-100" style={{ top: `${(index / (ticks.length - 1)) * 100}%` }} />
+          ))}
+          <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-around px-3">
+            {data.map((item) => {
+              const receitaHeight = (item.receitas / max) * 100;
+              const despesaHeight = (item.despesas / max) * 100;
+              return (
+                <div key={item.label} className="flex h-full flex-1 items-end justify-center gap-1.5">
+                  <span className="w-4 rounded-t bg-emerald-500" style={{ height: `${Math.max(2, receitaHeight)}%` }} title={`Receitas: ${formatCurrency(item.receitas)}`} />
+                  <span className="w-4 rounded-t bg-red-500" style={{ height: `${Math.max(2, despesaHeight)}%` }} title={`Despesas: ${formatCurrency(item.despesas)}`} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div />
+        <div className="flex items-center justify-around px-3 text-xs text-slate-500">
+          {data.map((item) => <span key={item.label}>{item.label}</span>)}
+        </div>
+      </div>
+      <div className="mt-4 flex justify-center gap-5 text-sm font-bold">
+        <span className="text-emerald-500">■ Receitas</span>
+        <span className="text-red-500">■ Despesas</span>
+      </div>
+    </div>
+  );
+};
+
+const BalanceEvolutionChart = ({
+  data,
+  hideValues,
+}: {
+  data: Array<{ label: string; saldo: number }>;
+  hideValues: boolean;
+}) => {
+  const values = data.map((item) => item.saldo);
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const range = Math.max(max - min, 1);
+  const width = 520;
+  const height = 210;
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? width / 2 : (index / (data.length - 1)) * width;
+    const y = height - ((item.saldo - min) / range) * height;
+    return { ...item, x, y };
+  });
+  const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const ticks = [max, (max + min) / 2, min];
+
+  return (
+    <div className="mt-8">
+      <div className="grid h-72 grid-cols-[76px_1fr] grid-rows-[1fr_30px]">
+        <div className="relative border-r border-slate-300">
+          {ticks.map((tick, index) => (
+            <span key={index} className="absolute right-3 -translate-y-1/2 text-xs text-slate-500" style={{ top: `${(index / (ticks.length - 1)) * 100}%` }}>
+              {hideValues ? maskMoney : formatChartMoney(tick)}
+            </span>
+          ))}
+        </div>
+        <div className="relative border-b border-slate-300">
+          {ticks.map((_, index) => (
+            <div key={index} className="absolute left-0 right-0 border-t border-dashed border-slate-100" style={{ top: `${(index / (ticks.length - 1)) * 100}%` }} />
+          ))}
+          <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full overflow-visible">
+            <path d={path} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {points.map((point) => (
+              <circle key={`${point.label}-${point.saldo}`} cx={point.x} cy={point.y} r="4" fill="#10b981">
+                <title>{`${point.label}: ${formatCurrency(point.saldo)}`}</title>
+              </circle>
+            ))}
+          </svg>
+        </div>
+        <div />
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span>{data[0]?.label}</span>
+          <span>{data[data.length - 1]?.label}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SimpleChart = ({ receitas, despesas }: { receitas: number; despesas: number }) => {
   const max = Math.max(receitas, despesas, 1);
