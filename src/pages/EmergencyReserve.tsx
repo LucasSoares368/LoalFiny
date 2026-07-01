@@ -234,7 +234,7 @@ const EmergencyReserve = () => {
       const payload = {
         goal_type: validatedData.goal_type,
         target_months: validatedData.target_months,
-        target_amount: validatedData.target_amount || null,
+        target_amount: validatedData.target_amount || 0,
       };
 
       if (emergencyGoal?.id) {
@@ -273,7 +273,7 @@ const EmergencyReserve = () => {
         current_amount: 0,
         goal_type: activeGoal.goal_type,
         target_months: activeGoal.target_months,
-        target_amount: activeGoal.target_amount,
+        target_amount: activeGoal.target_amount || 0,
       })
       .select("id")
       .single();
