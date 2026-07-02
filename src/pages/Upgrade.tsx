@@ -189,29 +189,32 @@ export default function Upgrade() {
 
   return (
     <AppLayout title="Planos e Preços">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 lg:space-y-8 pb-8">
+      <div className="mx-auto max-w-7xl space-y-8 pb-8">
         {/* Header */}
-        <div className="text-center space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-bold">
+        <div className="rounded-2xl border border-border/80 bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Crown className="h-8 w-8" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-normal sm:text-4xl">
             Escolha o plano ideal para você
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
+          <p className="mx-auto mt-2 max-w-2xl text-lg text-muted-foreground">
             Desbloqueie todo o potencial do LocalFiny com recursos avançados.
           </p>
 
           {/* Current plan badge */}
-          <Badge variant="outline" className="text-sm px-4 py-1">
+          <Badge variant="outline" className="mt-4 rounded-full px-4 py-1 text-sm">
             Plano atual: {currentPlan.plan_name}
           </Badge>
 
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center pt-2">
+          <div className="flex items-center justify-center pt-5">
             <Tabs value={billingPeriod} onValueChange={(v) => setBillingPeriod(v as "monthly" | "yearly")}>
-              <TabsList className="h-10">
-                <TabsTrigger value="monthly" className="px-4 sm:px-6">Mensal</TabsTrigger>
-                <TabsTrigger value="yearly" className="px-4 sm:px-6 relative">
+              <TabsList className="h-12 rounded-2xl bg-muted/70 p-1">
+                <TabsTrigger value="monthly" className="h-10 rounded-xl px-5 sm:px-7">Mensal</TabsTrigger>
+                <TabsTrigger value="yearly" className="relative h-10 rounded-xl px-5 sm:px-7">
                   Anual
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 text-[10px] sm:text-xs px-1.5 bg-success text-success-foreground">
+                  <Badge variant="secondary" className="absolute -right-3 -top-3 rounded-full bg-success px-2 py-0.5 text-[10px] text-success-foreground">
                     Economize
                   </Badge>
                 </TabsTrigger>
@@ -220,8 +223,24 @@ export default function Upgrade() {
           </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <Card className="rounded-2xl border-primary/20 bg-primary/5 shadow-sm">
+          <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-bold">Pagamento seguro via PIX</p>
+                <p className="text-sm text-muted-foreground">
+                  A liberação acontece automaticamente após confirmação do pagamento.
+                </p>
+              </div>
+            </div>
+            <Badge className="w-fit rounded-full bg-primary px-3 py-1 text-primary-foreground">
+              Garantia de 7 dias
+            </Badge>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan.plan_type);
             const isPro = plan.plan_type === "pro";
@@ -233,33 +252,35 @@ export default function Upgrade() {
             return (
               <Card 
                 key={plan.id} 
-                className={`relative overflow-hidden transition-all ${
-                  isPro ? "border-primary shadow-lg lg:scale-[1.02]" : "hover:shadow-md"
+                className={`relative overflow-hidden rounded-2xl border-border/80 bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
+                  isPro ? "border-primary shadow-primary/10 lg:scale-[1.02]" : ""
                 } ${isCurrent ? "ring-2 ring-primary" : ""}`}
               >
                 {isPro && (
-                  <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
-                    Mais Popular
+                  <div className="absolute right-0 top-0 rounded-bl-2xl bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground">
+                    Mais popular
                   </div>
                 )}
                 
-                <CardHeader className="pb-3 sm:pb-4">
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${getPlanColor(plan.plan_type)}`} />
+
+                <CardHeader className="pb-4 pt-7">
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br ${getPlanColor(plan.plan_type)} flex items-center justify-center text-white flex-shrink-0`}>
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${getPlanColor(plan.plan_type)} text-white`}>
                       {getPlanIcon(plan.plan_type)}
                     </div>
                     <div className="min-w-0">
-                      <CardTitle className="text-lg sm:text-xl">{plan.name}</CardTitle>
-                      <CardDescription className="text-xs sm:text-sm line-clamp-2">{plan.description}</CardDescription>
+                      <CardTitle className="text-xl">{plan.name}</CardTitle>
+                      <CardDescription className="line-clamp-2 text-sm">{plan.description}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4 sm:space-y-6">
+                <CardContent className="space-y-6">
                   {/* Price */}
                   <div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl sm:text-4xl font-bold">
+                      <span className="text-4xl font-bold">
                         {plan.price_monthly === 0 ? "Grátis" : formatPrice(monthlyPrice)}
                       </span>
                       {plan.price_monthly > 0 && (
@@ -267,18 +288,18 @@ export default function Upgrade() {
                       )}
                     </div>
                     {billingPeriod === "yearly" && savings > 0 && (
-                      <p className="text-xs sm:text-sm text-success font-medium mt-1">
-                        <Star className="h-3 w-3 inline mr-1" />
+                      <p className="mt-2 text-sm font-medium text-success">
+                        <Star className="mr-1 inline h-3 w-3" />
                         Economize {formatPrice(savings)}/ano
                       </p>
                     )}
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-2 sm:space-y-3">
+                  <ul className="space-y-3">
                     {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
-                        <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <li key={idx} className="flex items-start gap-2 text-sm">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -287,20 +308,20 @@ export default function Upgrade() {
                 
                 <CardFooter className="pt-0">
                   <Button 
-                    className={`w-full h-11 text-sm ${isPro ? "bg-primary hover:bg-primary/90" : "bg-success hover:bg-success/90 text-success-foreground"}`}
+                    className="h-12 w-full rounded-2xl font-bold"
                     variant={isCurrent ? "outline" : "default"}
                     disabled={isCurrent || processingPlan === plan.id}
                     onClick={() => handleSelectPlan(plan, "pix")}
                   >
                     {processingPlan === plan.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : isCurrent ? (
-                      "Plano Atual"
+                      "Plano atual"
                     ) : plan.price_monthly === 0 ? (
-                      "Plano Gratuito"
+                      "Plano gratuito"
                     ) : (
                       <>
-                        <QrCode className="h-4 w-4 mr-2" />
+                        <QrCode className="mr-2 h-4 w-4" />
                         Pagar com PIX
                       </>
                     )}
@@ -311,15 +332,14 @@ export default function Upgrade() {
           })}
         </div>
 
-        {/* Trust badge */}
-        <Card className="bg-muted/30">
-          <CardContent className="py-4 sm:py-6">
-            <div className="text-center space-y-1.5 sm:space-y-2">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="text-2xl">🛡️</span>
-                <h3 className="font-semibold text-sm sm:text-base">Garantia de 7 dias</h3>
+        <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
+          <CardContent className="py-6">
+            <div className="space-y-2 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                <h3 className="font-semibold">Garantia de 7 dias</h3>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
+              <p className="mx-auto max-w-md text-sm text-muted-foreground">
                 Não ficou satisfeito? Devolvemos 100% do seu dinheiro nos primeiros 7 dias. Pagamento seguro via Pix.
               </p>
             </div>

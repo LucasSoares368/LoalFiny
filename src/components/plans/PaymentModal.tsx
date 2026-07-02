@@ -211,7 +211,7 @@ export function PaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {status === 'pending' || status === 'processing' ? <QrCode className="h-5 w-5 text-primary" /> : null}
@@ -223,7 +223,7 @@ export function PaymentModal({
               <span className="text-xs font-semibold uppercase">Status:</span>
               <Badge 
                 variant={status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}
-                className={`text-[10px] ${status === 'pending' || status === 'processing' ? 'animate-pulse' : ''}`}
+                className={`rounded-full text-[10px] ${status === 'pending' || status === 'processing' ? 'animate-pulse' : ''}`}
               >
                 {config.badge}
               </Badge>
@@ -234,39 +234,39 @@ export function PaymentModal({
         <div className="flex flex-col items-center justify-center space-y-6 py-6">
           {status === 'completed' ? (
             <div className="flex flex-col items-center space-y-4 animate-in fade-in zoom-in duration-300">
-              <div className="h-20 w-20 bg-success/10 rounded-full flex items-center justify-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
                 {config.icon}
               </div>
               <p className="text-xs text-muted-foreground animate-pulse">Redirecionando você...</p>
             </div>
           ) : status === 'failed' || status === 'expired' ? (
             <div className="flex flex-col items-center space-y-4 animate-in fade-in zoom-in duration-300">
-              <div className={`h-20 w-20 ${status === 'failed' ? 'bg-destructive/10' : 'bg-amber-500/10'} rounded-full flex items-center justify-center`}>
+              <div className={`flex h-20 w-20 items-center justify-center rounded-full ${status === 'failed' ? 'bg-destructive/10' : 'bg-amber-500/10'}`}>
                 {config.icon}
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-                <Button onClick={onRetry}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Tentar Novamente
+                <Button variant="outline" className="rounded-2xl" onClick={() => onOpenChange(false)}>Fechar</Button>
+                <Button className="rounded-2xl" onClick={onRetry}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Tentar novamente
                 </Button>
               </div>
             </div>
           ) : (
             <>
               {pixData?.qr_code_base64 && status === 'pending' && (
-                <div className="bg-white p-4 rounded-lg shadow-sm border animate-in fade-in zoom-in duration-300">
+                <div className="animate-in fade-in zoom-in rounded-2xl border bg-white p-4 shadow-sm duration-300">
                   <img 
                     src={`data:image/png;base64,${pixData.qr_code_base64}`} 
                     alt="QR Code PIX" 
-                    className="w-48 h-48"
+                    className="h-48 w-48"
                   />
                 </div>
               )}
 
               {status === 'processing' && (
-                <div className="h-48 w-48 flex items-center justify-center">
-                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                <div className="flex h-48 w-48 items-center justify-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 </div>
               )}
               
@@ -279,11 +279,11 @@ export function PaymentModal({
                     <Input 
                       readOnly 
                       value={pixData?.qr_code || ""} 
-                      className="font-mono text-[10px] h-9 bg-muted/50"
+                      className="h-10 rounded-xl bg-muted/50 font-mono text-[10px]"
                     />
                     <Button 
                       size="icon" 
-                      className="h-9 w-9 shrink-0" 
+                      className="h-10 w-10 shrink-0 rounded-xl"
                       onClick={() => copyToClipboard(pixData?.qr_code || "")}
                     >
                       {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -294,10 +294,10 @@ export function PaymentModal({
                 {pixData?.ticket_url && (
                   <Button 
                     variant="link" 
-                    className="w-full text-xs h-auto py-0 text-muted-foreground"
+                    className="h-auto w-full py-0 text-xs text-muted-foreground"
                     onClick={() => window.open(pixData.ticket_url, '_blank')}
                   >
-                    <ExternalLink className="h-3 w-3 mr-1" />
+                    <ExternalLink className="mr-1 h-3 w-3" />
                     Abrir link do pagamento
                   </Button>
                 )}
