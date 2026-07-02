@@ -77,7 +77,7 @@ export const RegistrationControl = () => {
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-border/80 bg-card shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-primary" />
@@ -94,7 +94,7 @@ export const RegistrationControl = () => {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <p className="font-medium">Permitir novos cadastros</p>
                 <p className="text-sm text-muted-foreground">
@@ -102,7 +102,7 @@ export const RegistrationControl = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Badge variant={allow ? "default" : "destructive"}>
+                <Badge variant={allow ? "default" : "destructive"} className="rounded-full">
                   {allow ? "Habilitado" : "Desabilitado"}
                 </Badge>
                 <Switch
@@ -123,11 +123,11 @@ export const RegistrationControl = () => {
                   Nenhuma alteração registrada ainda.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                   {logs.map((log) => (
                     <div
                       key={log.id}
-                      className="flex items-center justify-between text-sm rounded-md border px-3 py-2"
+                      className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{log.setting_key}</span>

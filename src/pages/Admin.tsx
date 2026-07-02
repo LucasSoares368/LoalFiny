@@ -93,6 +93,11 @@ interface DashboardStats {
   newUsersThisMonth: number;
 }
 
+const adminCardClass = "rounded-2xl border-border/80 bg-card shadow-sm";
+const adminInputClass = "h-12 rounded-2xl";
+const adminButtonClass = "h-11 rounded-2xl font-semibold";
+const adminTableWrapClass = "overflow-hidden rounded-2xl border border-border/80 bg-card";
+
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdmin();
@@ -675,33 +680,35 @@ const Admin = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Shield className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-            <p className="text-muted-foreground">Gerencie usuários, assinaturas e configurações do sistema</p>
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Shield className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-normal">Painel Administrativo</h1>
+              <p className="text-muted-foreground">Gerencie usuários, assinaturas e configurações do sistema</p>
+            </div>
           </div>
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
-            <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl p-1 lg:w-[820px] lg:grid-cols-4">
+            <TabsTrigger value="users" className="flex h-11 items-center gap-2 rounded-xl">
               <Users className="h-4 w-4" />
               Usuários
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
+            <TabsTrigger value="payments" className="flex h-11 items-center gap-2 rounded-xl">
               <Settings className="h-4 w-4" />
               Config. Pagamento
             </TabsTrigger>
-            <TabsTrigger value="pix_history" className="flex items-center gap-2">
+            <TabsTrigger value="pix_history" className="flex h-11 items-center gap-2 rounded-xl">
               <CreditCard className="h-4 w-4" />
               Histórico PIX
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
+            <TabsTrigger value="settings" className="flex h-11 items-center gap-2 rounded-xl">
               <Shield className="h-4 w-4" />
               Configurações
             </TabsTrigger>
@@ -709,11 +716,13 @@ const Admin = () => {
 
           <TabsContent value="users" className="space-y-6 mt-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className={adminCardClass}>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
+                    <span className="rounded-xl bg-primary/10 p-2 text-primary">
+                      <Users className="h-4 w-4" />
+                    </span>
                     Total de Usuários
                   </CardDescription>
                 </CardHeader>
@@ -722,10 +731,12 @@ const Admin = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className={adminCardClass}>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-primary" />
+                    <span className="rounded-xl bg-primary/10 p-2 text-primary">
+                      <Crown className="h-4 w-4" />
+                    </span>
                     Usuários Pro
                   </CardDescription>
                 </CardHeader>
@@ -734,10 +745,12 @@ const Admin = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className={adminCardClass}>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    <span className="rounded-xl bg-muted p-2 text-muted-foreground">
+                      <UserCheck className="h-4 w-4" />
+                    </span>
                     Usuários Free
                   </CardDescription>
                 </CardHeader>
@@ -745,10 +758,12 @@ const Admin = () => {
                   <p className="text-2xl font-bold">{stats.freeUsers}</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className={adminCardClass}>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <span className="rounded-xl bg-primary/10 p-2 text-primary">
+                      <TrendingUp className="h-4 w-4" />
+                    </span>
                     Novos Este Mês
                   </CardDescription>
                 </CardHeader>
@@ -757,7 +772,7 @@ const Admin = () => {
                 </CardContent>
               </Card>
             </div>{/* Users Table */}
-            <Card>
+            <Card className={adminCardClass}>
               <CardHeader>
                 <CardTitle>Gerenciar Usuários</CardTitle>
                 <CardDescription>
@@ -773,11 +788,11 @@ const Admin = () => {
                       placeholder="Buscar por nome ou email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
+                      className={`${adminInputClass} pl-10`}
                     />
                   </div>
                   <Select value={planFilter} onValueChange={setPlanFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectTrigger className={`${adminInputClass} w-full sm:w-[200px]`}>
                       <SelectValue placeholder="Filtrar por plano" />
                     </SelectTrigger>
                     <SelectContent>
@@ -794,7 +809,7 @@ const Admin = () => {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="rounded-md border">
+                  <div className={adminTableWrapClass}>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -819,7 +834,7 @@ const Admin = () => {
                                 <div className="flex items-center gap-2">
                                   <div className="font-medium">{user.full_name || "Sem nome"}</div>
                                   {user.is_blocked && (
-                                    <Badge variant="destructive" className="h-4 px-1 text-[8px] uppercase">Bloqueado</Badge>
+                                    <Badge variant="destructive" className="h-5 rounded-full px-2 text-[9px] uppercase">Bloqueado</Badge>
                                   )}
                                 </div>
                                 <div className="text-sm text-muted-foreground sm:hidden">
@@ -854,7 +869,7 @@ const Admin = () => {
                               <TableCell>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -913,7 +928,7 @@ const Admin = () => {
           <TabsContent value="payments" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Mercado Pago Config Card */}
-              <Card>
+              <Card className={adminCardClass}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" />
@@ -931,12 +946,12 @@ const Admin = () => {
                       <Input
                         type="password"
                         placeholder="APP_USR-..."
-                        className="pl-10 border-amber-200"
+                        className={`${adminInputClass} pl-10 border-amber-200`}
                         value={mercadoPagoConfig.access_token}
                         onChange={(e) => setMercadoPagoConfig({ ...mercadoPagoConfig, access_token: e.target.value })}
                       />
                     </div>
-                    <p className="text-[10px] text-amber-700 mt-1 font-medium bg-amber-50 p-2 rounded border border-amber-100">
+                    <p className="mt-1 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-[10px] font-medium text-amber-700">
                       ⚠️ <strong>ERRO COMUM:</strong> O <strong>Access Token</strong> é muito mais longo (aprox. 80 caracteres).
                       Copie do campo "Access Token" no painel do Mercado Pago.
                     </p>
@@ -947,14 +962,14 @@ const Admin = () => {
                       <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="APP_USR-..."
-                        className="pl-10"
+                        className={`${adminInputClass} pl-10`}
                         value={mercadoPagoConfig.public_key}
                         onChange={(e) => setMercadoPagoConfig({ ...mercadoPagoConfig, public_key: e.target.value })}
                       />
                     </div>
                   </div>
                   <Button
-                    className="w-full"
+                    className={`w-full ${adminButtonClass}`}
                     onClick={handleSaveMercadoPagoConfig}
                     disabled={savingMercadoPago}
                   >
@@ -971,14 +986,14 @@ const Admin = () => {
               </Card>
 
               {/* Summary / Status Card */}
-              <Card>
+              <Card className={adminCardClass}>
                 <CardHeader>
                   <CardTitle>Status da Integração</CardTitle>
                   <CardDescription>Visão geral do sistema de cobrança</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between rounded-2xl bg-muted/50 p-4">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${mercadoPagoConfig.access_token ? 'bg-green-100' : 'bg-red-100'}`}>
                           {mercadoPagoConfig.access_token ? (
@@ -999,7 +1014,7 @@ const Admin = () => {
                   </div></CardContent>
               </Card>
             </div>{/* Plan Prices Section */}
-            <Card>
+            <Card className={adminCardClass}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -1015,77 +1030,80 @@ const Admin = () => {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Plano</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Preço Mensal (R$)</TableHead>
-                        <TableHead>Preço Anual (R$)</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {fullPlans.map((plan) => (
-                        <TableRow key={plan.id}>
-                          <TableCell className="font-medium">{plan.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{plan.plan_type}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="text"
-                              className="w-32"
-                              value={formatCentsToBRL(plan.price_monthly)}
-                              onChange={(e) => {
-                                const rawValue = e.target.value.replace(/[^\d]/g, "");
-                                const cents = parseInt(rawValue) || 0;
-                                const newPlans = fullPlans.map(p =>
-                                  p.id === plan.id ? { ...p, price_monthly: cents } : p
-                                );
-                                setFullPlans(newPlans);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="text"
-                              className="w-32"
-                              value={formatCentsToBRL(plan.price_yearly)}
-                              onChange={(e) => {
-                                const rawValue = e.target.value.replace(/[^\d]/g, "");
-                                const cents = parseInt(rawValue) || 0;
-                                const newPlans = fullPlans.map(p =>
-                                  p.id === plan.id ? { ...p, price_yearly: cents } : p
-                                );
-                                setFullPlans(newPlans);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              onClick={() => handleUpdatePlan(plan)}
-                              disabled={savingPlan === plan.id}
-                            >
-                              {savingPlan === plan.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Salvar"
-                              )}
-                            </Button>
-                          </TableCell>
+                  <div className={adminTableWrapClass}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Preço Mensal (R$)</TableHead>
+                          <TableHead>Preço Anual (R$)</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {fullPlans.map((plan) => (
+                          <TableRow key={plan.id}>
+                            <TableCell className="font-medium">{plan.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="rounded-full">{plan.plan_type}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="text"
+                                className={`${adminInputClass} w-36`}
+                                value={formatCentsToBRL(plan.price_monthly)}
+                                onChange={(e) => {
+                                  const rawValue = e.target.value.replace(/[^\d]/g, "");
+                                  const cents = parseInt(rawValue) || 0;
+                                  const newPlans = fullPlans.map(p =>
+                                    p.id === plan.id ? { ...p, price_monthly: cents } : p
+                                  );
+                                  setFullPlans(newPlans);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="text"
+                                className={`${adminInputClass} w-36`}
+                                value={formatCentsToBRL(plan.price_yearly)}
+                                onChange={(e) => {
+                                  const rawValue = e.target.value.replace(/[^\d]/g, "");
+                                  const cents = parseInt(rawValue) || 0;
+                                  const newPlans = fullPlans.map(p =>
+                                    p.id === plan.id ? { ...p, price_yearly: cents } : p
+                                  );
+                                  setFullPlans(newPlans);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdatePlan(plan)}
+                                disabled={savingPlan === plan.id}
+                                className="rounded-xl"
+                              >
+                                {savingPlan === plan.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Salvar"
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="pix_history" className="space-y-6 mt-6">
-            <Card>
+            <Card className={adminCardClass}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1098,13 +1116,14 @@ const Admin = () => {
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="rounded-xl"
                       onClick={() => setIsClearPaymentsDialogOpen(true)}
                       disabled={loadingPayments || clearingPayments || payments.length === 0}
                     >
                       {clearingPayments ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
                       Limpar Histórico
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => loadPayments(paymentsPage)} disabled={loadingPayments}>
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => loadPayments(paymentsPage)} disabled={loadingPayments}>
                       <RefreshCw className={`h-4 w-4 mr-2 ${loadingPayments ? 'animate-spin' : ''}`} />
                       Atualizar
                     </Button>
@@ -1118,7 +1137,7 @@ const Admin = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
-                    <div className="rounded-md border">
+                    <div className={adminTableWrapClass}>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -1155,7 +1174,7 @@ const Admin = () => {
                                 <TableCell>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" className="h-8 p-0 hover:bg-transparent">
+                                      <Button variant="ghost" className="h-8 rounded-xl px-2 hover:bg-transparent">
                                         <Badge
                                           className={
                                             payment.status === "completed" ? "bg-green-500 hover:bg-green-600" :
@@ -1203,6 +1222,7 @@ const Admin = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="rounded-xl"
                             onClick={() => loadPayments(paymentsPage - 1)}
                             disabled={paymentsPage === 1 || loadingPayments}
                           >
@@ -1214,6 +1234,7 @@ const Admin = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="rounded-xl"
                             onClick={() => loadPayments(paymentsPage + 1)}
                             disabled={paymentsPage >= Math.ceil(paymentsTotalCount / paymentsPageSize) || loadingPayments}
                           >
@@ -1230,7 +1251,7 @@ const Admin = () => {
 
           <TabsContent value="settings" className="space-y-6 mt-6">
             <RegistrationControl />
-            <Card>
+            <Card className={adminCardClass}>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5 text-primary" />
@@ -1248,6 +1269,7 @@ const Admin = () => {
                       URL da API
                     </label>
                     <Input
+                      className={adminInputClass}
                       placeholder="https://sua-api.com"
                       value={evolutionConfig.api_url}
                       onChange={(e) => setEvolutionConfig({ ...evolutionConfig, api_url: e.target.value })}
@@ -1259,6 +1281,7 @@ const Admin = () => {
                       API Key
                     </label>
                     <Input
+                      className={adminInputClass}
                       type="password"
                       placeholder="Sua API Key"
                       value={evolutionConfig.api_key}
@@ -1271,6 +1294,7 @@ const Admin = () => {
                       Nome da Instância
                     </label>
                     <Input
+                      className={adminInputClass}
                       placeholder="Ex: LocalFiny"
                       value={evolutionConfig.instance_name}
                       onChange={(e) => setEvolutionConfig({ ...evolutionConfig, instance_name: e.target.value })}
@@ -1282,7 +1306,7 @@ const Admin = () => {
                   <Button
                     onClick={handleSaveEvolutionConfig}
                     disabled={savingConfig}
-                    className="flex-1 sm:flex-none"
+                    className={`flex-1 sm:flex-none ${adminButtonClass}`}
                   >
                     {savingConfig ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1296,7 +1320,7 @@ const Admin = () => {
                     variant="outline"
                     onClick={handleTestEvolutionConnection}
                     disabled={testingConnection || !evolutionConfig.api_url}
-                    className="flex-1 sm:flex-none"
+                    className={`flex-1 sm:flex-none ${adminButtonClass}`}
                   >
                     {testingConnection ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1309,7 +1333,7 @@ const Admin = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={adminCardClass}>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -1327,6 +1351,7 @@ const Admin = () => {
                       OpenAI API Key
                     </label>
                     <Input
+                      className={adminInputClass}
                       type="password"
                       placeholder="sk-..."
                       value={openAiConfig.api_key}
@@ -1342,7 +1367,7 @@ const Admin = () => {
                       value={openAiConfig.model}
                       onValueChange={(value) => setOpenAiConfig({ ...openAiConfig, model: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={adminInputClass}>
                         <SelectValue placeholder="Selecione o modelo" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1359,7 +1384,7 @@ const Admin = () => {
                   <Button
                     onClick={handleSaveOpenAiConfig}
                     disabled={savingOpenAi}
-                    className="flex-1 sm:flex-none"
+                    className={`flex-1 sm:flex-none ${adminButtonClass}`}
                   >
                     {savingOpenAi ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1373,7 +1398,7 @@ const Admin = () => {
                     variant="outline"
                     onClick={handleTestOpenAiConnection}
                     disabled={testingOpenAi || !openAiConfig.api_key}
-                    className="flex-1 sm:flex-none"
+                    className={`flex-1 sm:flex-none ${adminButtonClass}`}
                   >
                     {testingOpenAi ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1386,7 +1411,7 @@ const Admin = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-50 border-dashed">
+            <Card className="rounded-2xl border-dashed border-border/80 bg-muted/40 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-sm">Informações Importantes</CardTitle>
               </CardHeader>
@@ -1402,7 +1427,7 @@ const Admin = () => {
 
       {/* Clear Payments Confirmation */}
       <AlertDialog open={isClearPaymentsDialogOpen} onOpenChange={setIsClearPaymentsDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Limpar Histórico de Pagamentos?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1410,8 +1435,8 @@ const Admin = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearPayments} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel className="rounded-2xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearPayments} className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Confirmar Limpeza
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1420,7 +1445,7 @@ const Admin = () => {
 
       {/* Delete User Confirmation */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
@@ -1431,8 +1456,8 @@ const Admin = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel className="rounded-2xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Sim, Excluir Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
