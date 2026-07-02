@@ -85,6 +85,122 @@ async function ensureColumn(tableName, columnName, definition) {
   }
 }
 
+async function ensureBasePlans() {
+  const basePlans = [
+    {
+      plan_type: "starter",
+      name: "Gratuito",
+      description: "Controle básico das suas finanças",
+      price_monthly: 0,
+      price_yearly: 0,
+      features: ["Dashboard básico", "2 contas bancárias", "1 meta financeira", "3 lembretes"],
+      max_banks: 2,
+      max_goals: 1,
+      max_reminders: 3,
+      history_months: 3,
+      is_active: true,
+      whatsapp_enabled: false,
+      reports_enabled: false,
+      cashflow_projection_enabled: false,
+      export_enabled: false,
+      split_enabled: false,
+      business_profile_enabled: false,
+      advanced_dashboard_enabled: false,
+      annual_projection_enabled: false,
+      monthly_planning_enabled: false,
+      ai_enabled: false,
+      import_enabled: false,
+    },
+    {
+      plan_type: "pro",
+      name: "Pro",
+      description: "Para quem quer organização completa",
+      price_monthly: 2990,
+      price_yearly: 29900,
+      features: ["Dashboard completo", "Contas ilimitadas", "Metas ilimitadas", "Lembretes via WhatsApp", "Relatórios avançados"],
+      max_banks: 999,
+      max_goals: 999,
+      max_reminders: 999,
+      history_months: 9999,
+      is_active: true,
+      whatsapp_enabled: true,
+      reports_enabled: true,
+      cashflow_projection_enabled: true,
+      export_enabled: true,
+      split_enabled: true,
+      business_profile_enabled: false,
+      advanced_dashboard_enabled: true,
+      annual_projection_enabled: true,
+      monthly_planning_enabled: true,
+      ai_enabled: true,
+      import_enabled: true,
+    },
+    {
+      plan_type: "business",
+      name: "Business",
+      description: "Para microempreendedores e freelancers",
+      price_monthly: 4990,
+      price_yearly: 49900,
+      features: ["Tudo do Pro", "Perfil PJ separado", "Exportação de relatórios", "Suporte prioritário"],
+      max_banks: 999,
+      max_goals: 999,
+      max_reminders: 999,
+      history_months: 9999,
+      is_active: true,
+      whatsapp_enabled: true,
+      reports_enabled: true,
+      cashflow_projection_enabled: true,
+      export_enabled: true,
+      split_enabled: true,
+      business_profile_enabled: true,
+      advanced_dashboard_enabled: true,
+      annual_projection_enabled: true,
+      monthly_planning_enabled: true,
+      ai_enabled: true,
+      import_enabled: true,
+    },
+  ];
+
+  for (const plan of basePlans) {
+    const rows = await query("select id from plans where plan_type = ? limit 1", [plan.plan_type]).catch(() => []);
+    if (rows.length) continue;
+
+    await query(
+      `insert into plans
+        (id, name, plan_type, description, price_monthly, price_yearly, features, max_banks, max_goals,
+         max_reminders, history_months, is_active, whatsapp_enabled, reports_enabled, cashflow_projection_enabled,
+         export_enabled, split_enabled, business_profile_enabled, advanced_dashboard_enabled, annual_projection_enabled,
+         monthly_planning_enabled, ai_enabled, import_enabled)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        plan.name,
+        plan.plan_type,
+        plan.description,
+        plan.price_monthly,
+        plan.price_yearly,
+        JSON.stringify(plan.features),
+        plan.max_banks,
+        plan.max_goals,
+        plan.max_reminders,
+        plan.history_months,
+        plan.is_active,
+        plan.whatsapp_enabled,
+        plan.reports_enabled,
+        plan.cashflow_projection_enabled,
+        plan.export_enabled,
+        plan.split_enabled,
+        plan.business_profile_enabled,
+        plan.advanced_dashboard_enabled,
+        plan.annual_projection_enabled,
+        plan.monthly_planning_enabled,
+        plan.ai_enabled,
+        plan.import_enabled,
+      ],
+    );
+  }
+}
+
 async function runMigrations() {
   await runSqlFileIfExists(path.join(__dirname, "..", "database", "mysql", "localfiny_2_0.sql"));
   await ensureColumn("transactions", "payment_method", "varchar(50) null after bank_id");
@@ -101,6 +217,7 @@ async function runMigrations() {
   await ensureColumn("plans", "ai_enabled", "boolean not null default false after monthly_planning_enabled");
   await ensureColumn("plans", "import_enabled", "boolean not null default false after ai_enabled");
   await ensureColumn("plans", "is_active", "boolean not null default true after features");
+  await ensureBasePlans();
 }
 
 const marketQuoteSymbols = [
