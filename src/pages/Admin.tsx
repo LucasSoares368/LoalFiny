@@ -35,7 +35,10 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,6 +100,33 @@ const adminCardClass = "rounded-2xl border-border/80 bg-card shadow-sm";
 const adminInputClass = "h-12 rounded-2xl";
 const adminButtonClass = "h-11 rounded-2xl font-semibold";
 const adminTableWrapClass = "overflow-hidden rounded-2xl border border-border/80 bg-card";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+async function adminApi(path: string, options: RequestInit = {}) {
+  const rawSession = localStorage.getItem("localfiny_session");
+  const session = rawSession ? JSON.parse(rawSession) : null;
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Erro na API");
+  return payload.data;
+}
+
+const planFeatureFields = [
+  { key: "whatsapp_enabled", label: "WhatsApp" },
+  { key: "reports_enabled", label: "Relatórios" },
+  { key: "cashflow_projection_enabled", label: "Projeção de caixa" },
+  { key: "export_enabled", label: "Exportação" },
+  { key: "split_enabled", label: "Divisão automática" },
+  { key: "business_profile_enabled", label: "Perfil empresarial" },
+  { key: "advanced_dashboard_enabled", label: "Dashboard avançado" },
+  { key: "annual_projection_enabled", label: "Projeção anual" },
+  { key: "monthly_planning_enabled", label: "Planejamento mensal" },
+  { key: "ai_enabled", label: "Assistente IA" },
+  { key: "import_enabled", label: "Importação de dados" },
+] as const;
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -185,22 +215,13 @@ const Admin = () => {
   const loadPayments = async (page: number = 1) => {
     setLoadingPayments(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "get",
-          table: "payments",
-          data: { page, pageSize: paymentsPageSize }
-        }
-      });
-      if (error) throw error;
-      if (data) {
-        setPayments(data.data);
-        setPaymentsTotalCount(data.count);
-        setPaymentsPage(page);
-      }
-    } catch (error) {
+      const data = await adminApi(`/admin/payments?page=${page}&pageSize=${paymentsPageSize}`);
+      setPayments(data.data || []);
+      setPaymentsTotalCount(data.count || 0);
+      setPaymentsPage(page);
+    } catch (error: any) {
       console.error("Error loading payments:", error);
-      toast.error("Erro ao carregar histórico de pagamentos");
+      toast.error("Erro ao carregar histórico de pagamentos: " + error.message);
     } finally {
       setLoadingPayments(false);
     }
@@ -208,37 +229,23 @@ const Admin = () => {
 
   const handleUpdatePaymentStatus = async (paymentId: string, newStatus: string) => {
     try {
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "update",
-          table: "payments",
-          data: {
-            id: paymentId,
-            status: newStatus
-          }
-        }
+      await adminApi(`/admin/payments/${paymentId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
       });
-
-      if (error) throw error;
       toast.success("Status do pagamento atualizado!");
       loadPayments(paymentsPage);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating payment status:", error);
-      toast.error("Erro ao atualizar status do pagamento");
+      toast.error("Erro ao atualizar status do pagamento: " + error.message);
     }
   };
-
 
   const handleClearPayments = async () => {
     setIsClearPaymentsDialogOpen(false);
     setClearingPayments(true);
-
-    setClearingPayments(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: { action: "clear_all", table: "payments" }
-      });
-      if (error) throw error;
+      await adminApi("/admin/payments", { method: "DELETE" });
       toast.success("Histórico limpo com sucesso!");
       loadPayments(1);
     } catch (error: any) {
@@ -251,10 +258,7 @@ const Admin = () => {
 
   const loadMercadoPagoConfig = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("admin-settings", {
-        body: { action: "get", table: "mercado_pago_config" }
-      });
-      if (error) throw error;
+      const data = await adminApi("/admin/config/mercado_pago");
       if (data) setMercadoPagoConfig(data);
     } catch (error) {
       console.error("Error loading Mercado Pago config:", error);
@@ -264,22 +268,12 @@ const Admin = () => {
   const handleSaveMercadoPagoConfig = async () => {
     setSavingMercadoPago(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "update",
-          table: "mercado_pago_config",
-          data: {
-            id: mercadoPagoConfig.id || undefined,
-            access_token: mercadoPagoConfig.access_token,
-            public_key: mercadoPagoConfig.public_key,
-            is_active: mercadoPagoConfig.is_active
-          }
-        }
+      const data = await adminApi("/admin/config/mercado_pago", {
+        method: "PUT",
+        body: JSON.stringify(mercadoPagoConfig),
       });
-
-      if (error) throw error;
+      if (data) setMercadoPagoConfig(data);
       toast.success("Configuração do Mercado Pago salva com sucesso!");
-      loadMercadoPagoConfig();
     } catch (error: any) {
       toast.error("Erro ao salvar configuração: " + error.message);
     } finally {
@@ -290,11 +284,8 @@ const Admin = () => {
   const loadFullPlans = async () => {
     setLoadingPlans(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-settings", {
-        body: { action: "get", table: "plans" }
-      });
-      if (error) throw error;
-      if (data) setFullPlans(data);
+      const data = await adminApi("/admin/plans");
+      setFullPlans(data || []);
     } catch (error) {
       console.error("Error loading plans:", error);
     } finally {
@@ -305,30 +296,21 @@ const Admin = () => {
   const handleUpdatePlan = async (plan: any) => {
     setSavingPlan(plan.id);
     try {
-      // Normalize values to ensure they are integers (cents)
-      const price_monthly = typeof plan.price_monthly === 'string'
+      const price_monthly = typeof plan.price_monthly === "string"
         ? parseInt(plan.price_monthly.replace(/[^\d]/g, "")) || 0
         : Math.round(plan.price_monthly || 0);
 
-      const price_yearly = typeof plan.price_yearly === 'string'
+      const price_yearly = typeof plan.price_yearly === "string"
         ? parseInt(plan.price_yearly.replace(/[^\d]/g, "")) || 0
         : Math.round(plan.price_yearly || 0);
 
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "update",
-          table: "plans",
-          data: {
-            id: plan.id,
-            price_monthly,
-            price_yearly
-          }
-        }
+      await adminApi(`/admin/plans/${plan.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ ...plan, price_monthly, price_yearly }),
       });
-
-      if (error) throw error;
       toast.success(`Plano ${plan.name} atualizado com sucesso!`);
       loadFullPlans();
+      loadPlans();
     } catch (error: any) {
       toast.error("Erro ao atualizar plano: " + error.message);
     } finally {
@@ -337,30 +319,23 @@ const Admin = () => {
   };
 
   const loadOpenAiConfig = async () => {
-    const { data, error } = await supabase
-      .from("openai_config")
-      .select("*")
-      .maybeSingle();
-
-    if (!error && data) {
-      setOpenAiConfig(data);
+    try {
+      const data = await adminApi("/admin/config/openai");
+      if (data) setOpenAiConfig(data);
+    } catch (error) {
+      console.error("Error loading OpenAI config:", error);
     }
   };
 
   const handleSaveOpenAiConfig = async () => {
     setSavingOpenAi(true);
     try {
-      const { error } = await supabase
-        .from("openai_config")
-        .upsert({
-          id: openAiConfig.id || undefined,
-          api_key: openAiConfig.api_key,
-          model: openAiConfig.model,
-        });
-
-      if (error) throw error;
+      const data = await adminApi("/admin/config/openai", {
+        method: "PUT",
+        body: JSON.stringify(openAiConfig),
+      });
+      if (data) setOpenAiConfig(data);
       toast.success("Configuração da OpenAI salva com sucesso!");
-      loadOpenAiConfig();
     } catch (error: any) {
       console.error("Error saving OpenAI config:", error);
       toast.error("Erro ao salvar configuração: " + error.message);
@@ -372,20 +347,11 @@ const Admin = () => {
   const handleTestOpenAiConnection = async () => {
     setTestingOpenAi(true);
     try {
-      const { data, error } = await supabase.functions.invoke("openai-config", {
-        body: {
-          action: "test-connection",
-          config: openAiConfig
-        },
+      const data = await adminApi("/admin/config/openai/test", {
+        method: "POST",
+        body: JSON.stringify(openAiConfig),
       });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast.success(data.message || "Conexão estabelecida com sucesso!");
-      } else {
-        toast.error("Erro na conexão: " + data.error);
-      }
+      toast.success(data.message || "Conexão estabelecida com sucesso!");
     } catch (error: any) {
       console.error("Error testing OpenAI connection:", error);
       toast.error("Erro ao testar conexão: " + error.message);
@@ -399,31 +365,23 @@ const Admin = () => {
   }, [users, searchTerm, planFilter]);
 
   const loadEvolutionConfig = async () => {
-    const { data, error } = await supabase
-      .from("evolution_api_config")
-      .select("*")
-      .maybeSingle();
-
-    if (!error && data) {
-      setEvolutionConfig(data);
+    try {
+      const data = await adminApi("/admin/config/evolution");
+      if (data) setEvolutionConfig(data);
+    } catch (error) {
+      console.error("Error loading Evolution config:", error);
     }
   };
 
   const handleSaveEvolutionConfig = async () => {
     setSavingConfig(true);
     try {
-      const { error } = await supabase
-        .from("evolution_api_config")
-        .upsert({
-          id: evolutionConfig.id || undefined,
-          api_url: evolutionConfig.api_url,
-          api_key: evolutionConfig.api_key,
-          instance_name: evolutionConfig.instance_name,
-        });
-
-      if (error) throw error;
+      const data = await adminApi("/admin/config/evolution", {
+        method: "PUT",
+        body: JSON.stringify(evolutionConfig),
+      });
+      if (data) setEvolutionConfig(data);
       toast.success("Configuração da Evolution API salva com sucesso!");
-      loadEvolutionConfig();
     } catch (error: any) {
       console.error("Error saving Evolution config:", error);
       toast.error("Erro ao salvar configuração: " + error.message);
@@ -435,20 +393,11 @@ const Admin = () => {
   const handleTestEvolutionConnection = async () => {
     setTestingConnection(true);
     try {
-      const { data, error } = await supabase.functions.invoke("evolution-api", {
-        body: {
-          action: "test-connection",
-          config: evolutionConfig
-        },
+      const data = await adminApi("/admin/config/evolution/test", {
+        method: "POST",
+        body: JSON.stringify(evolutionConfig),
       });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast.success("Conexão estabelecida com sucesso!");
-      } else {
-        toast.error("Erro na conexão: " + data.error);
-      }
+      toast.success(data.message || "Conexão estabelecida com sucesso!");
     } catch (error: any) {
       console.error("Error testing connection:", error);
       toast.error("Erro ao testar conexão: " + error.message);
@@ -458,83 +407,43 @@ const Admin = () => {
   };
 
   const loadPlans = async () => {
-    const { data, error } = await supabase
-      .from("plans")
-      .select("id, name, plan_type")
-      .eq("is_active", true);
-
-    if (!error && data) {
-      setPlans(data);
+    try {
+      const data = await adminApi("/admin/plans");
+      setPlans((data || []).filter((plan: any) => plan.is_active).map((plan: any) => ({
+        id: plan.id,
+        name: plan.name,
+        plan_type: plan.plan_type,
+      })));
+    } catch (error: any) {
+      console.error("Error loading plans:", error);
+      toast.error("Erro ao carregar planos: " + error.message);
     }
   };
 
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Get all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const usersWithPlans: UserWithPlan[] = await adminApi("/admin/users");
+      setUsers(usersWithPlans || []);
 
-      if (profilesError) throw profilesError;
-
-      // Get all subscriptions with plan info
-      const { data: subscriptions, error: subsError } = await supabase
-        .from("subscriptions")
-        .select(`
-          user_id,
-          status,
-          plans (
-            name,
-            plan_type
-          )
-        `);
-
-      if (subsError) throw subsError;
-
-      // Merge data
-      const usersWithPlans: UserWithPlan[] = (profiles || []).map((profile) => {
-        const subscription = subscriptions?.find(s => s.user_id === profile.id);
-        const isActive = subscription?.status === "active";
-        
-        return {
-          id: profile.id,
-          email: profile.email,
-          full_name: profile.full_name,
-          created_at: profile.created_at,
-          phone_number: profile.phone_number,
-          is_blocked: profile.is_blocked || false,
-          subscription_status: subscription?.status || null,
-          // Only show the plan if it's active, otherwise default to free
-          plan_type: isActive ? (subscription?.plans?.plan_type || "free") : "free",
-          plan_name: isActive ? (subscription?.plans?.name || "Gratuito") : "Gratuito",
-        };
-      });
-
-      setUsers(usersWithPlans);
-
-      // Calculate stats
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const proCount = usersWithPlans.filter(u =>
+      const proCount = (usersWithPlans || []).filter(u =>
         u.subscription_status === "active" && u.plan_type !== "free"
       ).length;
-
-      const newThisMonth = usersWithPlans.filter(u =>
+      const newThisMonth = (usersWithPlans || []).filter(u =>
         u.created_at && new Date(u.created_at) >= startOfMonth
       ).length;
 
       setStats({
-        totalUsers: usersWithPlans.length,
+        totalUsers: usersWithPlans?.length || 0,
         proUsers: proCount,
-        freeUsers: usersWithPlans.length - proCount,
+        freeUsers: (usersWithPlans?.length || 0) - proCount,
         newUsersThisMonth: newThisMonth,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading users:", error);
-      toast.error("Erro ao carregar usuários");
+      toast.error("Erro ao carregar usuários: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -565,51 +474,16 @@ const Admin = () => {
 
   const handleSetPlan = async (userId: string, planType: "free" | "pro" | "business") => {
     try {
-      if (planType === "free") {
-        // Use edge function to bypass RLS
-        const { error } = await supabase.functions.invoke("admin-settings", {
-          body: {
-            action: "delete",
-            table: "subscriptions",
-            data: { user_id: userId }
-          }
-        });
-
-        if (error) throw error;
-        toast.success("Usuário alterado para plano Gratuito");
-      } else {
-        // Find the plan ID
-        const plan = plans.find(p => p.plan_type === planType);
-        if (!plan) {
-          toast.error("Plano não encontrado");
-          return;
-        }
-
-        // Use edge function to bypass RLS
-        const { error } = await supabase.functions.invoke("admin-settings", {
-          body: {
-            action: "update",
-            table: "subscriptions",
-            data: {
-              user_id: userId,
-              plan_id: plan.id,
-              status: "active",
-              billing_period: "yearly",
-              current_period_start: new Date().toISOString(),
-              current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        toast.success(`Usuário alterado para plano ${plan.name}`);
-      }
-
+      await adminApi(`/admin/users/${userId}/plan`, {
+        method: "PUT",
+        body: JSON.stringify({ plan_type: planType, billing_period: "yearly" }),
+      });
+      const plan = plans.find(p => p.plan_type === planType);
+      toast.success(planType === "free" ? "Usuário alterado para plano Gratuito" : `Usuário alterado para plano ${plan?.name || planType}`);
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error setting plan:", error);
-      toast.error("Erro ao alterar plano do usuário");
+      toast.error("Erro ao alterar plano do usuário: " + error.message);
     }
   };
 
@@ -620,24 +494,15 @@ const Admin = () => {
         toast.error("Você não pode bloquear a si próprio!");
         return;
       }
-
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "update",
-          table: "profiles",
-          data: {
-            id: userId,
-            is_blocked: !currentStatus
-          }
-        }
+      await adminApi(`/admin/users/${userId}/block`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_blocked: !currentStatus }),
       });
-
-      if (error) throw error;
       toast.success(currentStatus ? "Usuário desbloqueado!" : "Usuário bloqueado!");
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling block:", error);
-      toast.error("Erro ao alterar status do usuário");
+      toast.error("Erro ao alterar status do usuário: " + error.message);
     }
   };
 
@@ -646,20 +511,13 @@ const Admin = () => {
     const userId = userToDelete;
 
     try {
-      const { error } = await supabase.functions.invoke("admin-settings", {
-        body: {
-          action: "delete",
-          table: "users",
-          data: { id: userId }
-        }
-      });
-
-      if (error) throw error;
+      await adminApi(`/admin/users/${userId}`, { method: "DELETE" });
       toast.success("Usuário excluído com sucesso!");
+      setUserToDelete(null);
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
-      toast.error("Erro ao excluir usuário");
+      toast.error("Erro ao excluir usuário: " + error.message);
     }
   };
 
@@ -1018,10 +876,10 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  Valores dos Planos
+                  Planos e permissões
                 </CardTitle>
                 <CardDescription>
-                  Ajuste os preços mensais e anuais de cada plano. Informe os valores em reais (Ex: 29,90)
+                  Edite textos, preços, limites e recursos liberados em cada plano.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1030,72 +888,154 @@ const Admin = () => {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className={adminTableWrapClass}>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Plano</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Preço Mensal (R$)</TableHead>
-                          <TableHead>Preço Anual (R$)</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {fullPlans.map((plan) => (
-                          <TableRow key={plan.id}>
-                            <TableCell className="font-medium">{plan.name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="rounded-full">{plan.plan_type}</Badge>
-                            </TableCell>
-                            <TableCell>
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    {fullPlans.map((plan) => {
+                      const featuresValue = Array.isArray(plan.features)
+                        ? plan.features.join("\n")
+                        : typeof plan.features === "string"
+                          ? (() => {
+                              try {
+                                const parsed = JSON.parse(plan.features);
+                                return Array.isArray(parsed) ? parsed.join("\n") : plan.features;
+                              } catch {
+                                return plan.features;
+                              }
+                            })()
+                          : "";
+
+                      return (
+                        <div key={plan.id} className="rounded-2xl border border-border/80 bg-background/60 p-5 shadow-sm">
+                          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-xl font-bold">{plan.name}</h3>
+                                <Badge variant={plan.is_active ? "default" : "secondary"} className="rounded-full">
+                                  {plan.is_active ? "Ativo" : "Inativo"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{plan.plan_type}</p>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-2xl bg-muted/60 px-3 py-2">
+                              <Label className="text-xs text-muted-foreground">Plano ativo</Label>
+                              <Switch
+                                checked={!!plan.is_active}
+                                onCheckedChange={(checked) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, is_active: checked } : p))}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>Nome do card</Label>
+                              <Input
+                                className={adminInputClass}
+                                value={plan.name || ""}
+                                onChange={(e) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, name: e.target.value } : p))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Tipo interno</Label>
+                              <Input
+                                className={adminInputClass}
+                                value={plan.plan_type || ""}
+                                onChange={(e) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, plan_type: e.target.value } : p))}
+                              />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>Texto/descrição do card</Label>
+                              <Textarea
+                                className="min-h-20 rounded-2xl"
+                                value={plan.description || ""}
+                                onChange={(e) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, description: e.target.value } : p))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Preço mensal (R$)</Label>
                               <Input
                                 type="text"
-                                className={`${adminInputClass} w-36`}
+                                className={adminInputClass}
                                 value={formatCentsToBRL(plan.price_monthly)}
                                 onChange={(e) => {
-                                  const rawValue = e.target.value.replace(/[^\d]/g, "");
-                                  const cents = parseInt(rawValue) || 0;
-                                  const newPlans = fullPlans.map(p =>
-                                    p.id === plan.id ? { ...p, price_monthly: cents } : p
-                                  );
-                                  setFullPlans(newPlans);
+                                  const cents = parseInt(e.target.value.replace(/[^\d]/g, "")) || 0;
+                                  setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, price_monthly: cents } : p));
                                 }}
                               />
-                            </TableCell>
-                            <TableCell>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Preço anual (R$)</Label>
                               <Input
                                 type="text"
-                                className={`${adminInputClass} w-36`}
+                                className={adminInputClass}
                                 value={formatCentsToBRL(plan.price_yearly)}
                                 onChange={(e) => {
-                                  const rawValue = e.target.value.replace(/[^\d]/g, "");
-                                  const cents = parseInt(rawValue) || 0;
-                                  const newPlans = fullPlans.map(p =>
-                                    p.id === plan.id ? { ...p, price_yearly: cents } : p
-                                  );
-                                  setFullPlans(newPlans);
+                                  const cents = parseInt(e.target.value.replace(/[^\d]/g, "")) || 0;
+                                  setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, price_yearly: cents } : p));
                                 }}
                               />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                onClick={() => handleUpdatePlan(plan)}
-                                disabled={savingPlan === plan.id}
-                                className="rounded-xl"
-                              >
-                                {savingPlan === plan.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  "Salvar"
-                                )}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            {[
+                              ["max_banks", "Bancos"],
+                              ["max_goals", "Metas"],
+                              ["max_reminders", "Lembretes"],
+                              ["history_months", "Histórico (meses)"],
+                            ].map(([field, label]) => (
+                              <div key={field} className="space-y-2">
+                                <Label>{label}</Label>
+                                <Input
+                                  type="number"
+                                  className={adminInputClass}
+                                  value={plan[field] ?? 0}
+                                  onChange={(e) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, [field]: Number(e.target.value || 0) } : p))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-5 space-y-2">
+                            <Label>Itens exibidos no card do plano</Label>
+                            <Textarea
+                              className="min-h-24 rounded-2xl"
+                              placeholder="Uma vantagem por linha"
+                              value={featuresValue}
+                              onChange={(e) => {
+                                const features = e.target.value.split("\n").map((item) => item.trim()).filter(Boolean);
+                                setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, features } : p));
+                              }}
+                            />
+                          </div>
+
+                          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {planFeatureFields.map((feature) => (
+                              <div key={feature.key} className="flex items-center justify-between rounded-2xl border border-border/70 bg-card px-3 py-3">
+                                <Label className="text-sm">{feature.label}</Label>
+                                <Switch
+                                  checked={!!plan[feature.key]}
+                                  onCheckedChange={(checked) => setFullPlans((current) => current.map((p) => p.id === plan.id ? { ...p, [feature.key]: checked } : p))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-5 flex justify-end">
+                            <Button
+                              onClick={() => handleUpdatePlan(plan)}
+                              disabled={savingPlan === plan.id}
+                              className={adminButtonClass}
+                            >
+                              {savingPlan === plan.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                              )}
+                              Salvar plano
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

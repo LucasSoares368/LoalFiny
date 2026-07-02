@@ -98,6 +98,9 @@ async function runMigrations() {
   await ensureColumn("custom_goals", "debt_id", "char(36) null after destination_bank_id");
   await ensureColumn("emergency_goals", "profile_type", "varchar(20) not null default 'personal' after user_id");
   await ensureColumn("fixed_costs", "profile_type", "varchar(20) not null default 'personal' after user_id");
+  await ensureColumn("plans", "ai_enabled", "boolean not null default false after monthly_planning_enabled");
+  await ensureColumn("plans", "import_enabled", "boolean not null default false after ai_enabled");
+  await ensureColumn("plans", "is_active", "boolean not null default true after features");
 }
 
 const marketQuoteSymbols = [
@@ -295,6 +298,11 @@ function isAdminUser(user) {
   return ["admin", "superadmin"].includes(String(user?.role || "").toLowerCase());
 }
 
+function adminRequired(req, res, next) {
+  if (!isAdminUser(req.user)) return res.status(403).json({ error: "Acesso negado" });
+  next();
+}
+
 function defaultPlan() {
   return {
     plan_type: "starter",
@@ -343,6 +351,20 @@ function fullFeaturePlan(planName = "Business") {
 function handleError(res, error) {
   const status = error.status || 500;
   res.status(status).json({ error: error.message || "Erro interno" });
+}
+
+function boolValue(value) {
+  return value === true || value === 1 || value === "1" || value === "true";
+}
+
+function centsValue(value) {
+  if (typeof value === "string") return Number.parseInt(value.replace(/\D/g, ""), 10) || 0;
+  return Math.max(0, Math.round(Number(value || 0)));
+}
+
+function intValue(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function buildWhere(table, filters, userId, params) {
@@ -831,6 +853,378 @@ app.post("/api/rpc/update_app_setting", authRequired, async (req, res) => {
       "insert into app_settings_logs (id, changed_by, setting_key, old_value, new_value) values (?, ?, 'allow_registration', ?, ?)",
       [uuidv4(), req.user.id, rows[0] ? String(Boolean(rows[0].allow_registration)) : null, String(allowRegistration)],
     ).catch(() => null);
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.get("/api/admin/users", authRequired, adminRequired, async (_req, res) => {
+  try {
+    const rows = await query(`
+      select
+        u.id,
+        u.email,
+        u.name,
+        u.role,
+        u.created_at,
+        p.full_name,
+        p.name as profile_name,
+        p.phone_number,
+        p.telefone,
+        p.is_blocked,
+        s.id as subscription_id,
+        s.status as subscription_status,
+        s.billing_period,
+        s.current_period_start,
+        s.current_period_end,
+        pl.id as plan_id,
+        pl.name as plan_name,
+        pl.plan_type
+      from users u
+      left join profiles p on p.id = (
+        select p2.id
+          from profiles p2
+         where p2.user_id = u.id or p2.id = u.id
+         order by p2.updated_at desc, p2.created_at desc
+         limit 1
+      )
+      left join subscriptions s on s.id = (
+        select s2.id
+          from subscriptions s2
+         where s2.user_id = u.id
+         order by (s2.status = 'active') desc, s2.updated_at desc, s2.created_at desc
+         limit 1
+      )
+      left join plans pl on pl.id = s.plan_id
+      order by u.created_at desc
+    `);
+
+    const users = rows.map((row) => {
+      const normalized = normalizeRow(row);
+      const isActive = normalized.subscription_status === "active";
+      return {
+        ...normalized,
+        full_name: normalized.full_name || normalized.profile_name || normalized.name || "Sem nome",
+        phone_number: normalized.phone_number || normalized.telefone || null,
+        is_blocked: boolValue(normalized.is_blocked),
+        plan_type: isActive ? (normalized.plan_type || "free") : "free",
+        plan_name: isActive ? (normalized.plan_name || "Gratuito") : "Gratuito",
+      };
+    });
+
+    res.json({ data: users, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.get("/api/admin/plans", authRequired, adminRequired, async (_req, res) => {
+  try {
+    const rows = await query("select * from plans order by price_monthly asc, created_at asc");
+    res.json({ data: rows.map(normalizeRow), error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.put("/api/admin/plans/:id", authRequired, adminRequired, async (req, res) => {
+  try {
+    const plan = req.body || {};
+    const payload = {
+      id: req.params.id,
+      name: String(plan.name || "").trim() || "Plano",
+      description: plan.description || null,
+      plan_type: String(plan.plan_type || "starter").trim().toLowerCase(),
+      price_monthly: centsValue(plan.price_monthly),
+      price_yearly: centsValue(plan.price_yearly),
+      max_banks: intValue(plan.max_banks, 999),
+      max_goals: intValue(plan.max_goals, 1),
+      max_reminders: intValue(plan.max_reminders, 3),
+      history_months: intValue(plan.history_months, 3),
+      features: Array.isArray(plan.features) ? JSON.stringify(plan.features.filter(Boolean)) : (plan.features || null),
+      is_active: boolValue(plan.is_active),
+      whatsapp_enabled: boolValue(plan.whatsapp_enabled),
+      reports_enabled: boolValue(plan.reports_enabled),
+      cashflow_projection_enabled: boolValue(plan.cashflow_projection_enabled),
+      export_enabled: boolValue(plan.export_enabled),
+      split_enabled: boolValue(plan.split_enabled),
+      business_profile_enabled: boolValue(plan.business_profile_enabled),
+      advanced_dashboard_enabled: boolValue(plan.advanced_dashboard_enabled),
+      annual_projection_enabled: boolValue(plan.annual_projection_enabled),
+      monthly_planning_enabled: boolValue(plan.monthly_planning_enabled),
+      ai_enabled: boolValue(plan.ai_enabled),
+      import_enabled: boolValue(plan.import_enabled),
+    };
+
+    await query(
+      `update plans
+          set name = ?,
+              description = ?,
+              plan_type = ?,
+              price_monthly = ?,
+              price_yearly = ?,
+              max_banks = ?,
+              max_goals = ?,
+              max_reminders = ?,
+              history_months = ?,
+              features = ?,
+              is_active = ?,
+              whatsapp_enabled = ?,
+              reports_enabled = ?,
+              cashflow_projection_enabled = ?,
+              export_enabled = ?,
+              split_enabled = ?,
+              business_profile_enabled = ?,
+              advanced_dashboard_enabled = ?,
+              annual_projection_enabled = ?,
+              monthly_planning_enabled = ?,
+              ai_enabled = ?,
+              import_enabled = ?
+        where id = ?`,
+      [
+        payload.name,
+        payload.description,
+        payload.plan_type,
+        payload.price_monthly,
+        payload.price_yearly,
+        payload.max_banks,
+        payload.max_goals,
+        payload.max_reminders,
+        payload.history_months,
+        payload.features,
+        payload.is_active,
+        payload.whatsapp_enabled,
+        payload.reports_enabled,
+        payload.cashflow_projection_enabled,
+        payload.export_enabled,
+        payload.split_enabled,
+        payload.business_profile_enabled,
+        payload.advanced_dashboard_enabled,
+        payload.annual_projection_enabled,
+        payload.monthly_planning_enabled,
+        payload.ai_enabled,
+        payload.import_enabled,
+        payload.id,
+      ],
+    );
+
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.put("/api/admin/users/:id/plan", authRequired, adminRequired, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const planType = String(req.body?.plan_type || "free").toLowerCase();
+    if (planType === "free") {
+      await query("delete from subscriptions where user_id = ?", [userId]);
+      return res.json({ data: true, error: null });
+    }
+
+    const planRows = await query("select id, name from plans where plan_type = ? and is_active = true order by price_monthly desc limit 1", [planType]);
+    if (!planRows.length) return res.status(404).json({ error: "Plano nao encontrado" });
+
+    const subRows = await query("select id from subscriptions where user_id = ? order by updated_at desc, created_at desc limit 1", [userId]);
+    const periodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    if (subRows[0]) {
+      await query(
+        `update subscriptions
+            set plan_id = ?,
+                status = 'active',
+                billing_period = ?,
+                current_period_start = now(),
+                current_period_end = ?,
+                canceled_at = null
+          where id = ?`,
+        [planRows[0].id, req.body?.billing_period || "yearly", periodEnd, subRows[0].id],
+      );
+    } else {
+      await query(
+        `insert into subscriptions
+          (id, user_id, plan_id, status, billing_period, current_period_start, current_period_end)
+         values (?, ?, ?, 'active', ?, now(), ?)`,
+        [uuidv4(), userId, planRows[0].id, req.body?.billing_period || "yearly", periodEnd],
+      );
+    }
+
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.patch("/api/admin/users/:id/block", authRequired, adminRequired, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (userId === req.user.id) return res.status(400).json({ error: "Voce nao pode bloquear a si proprio" });
+    const isBlocked = boolValue(req.body?.is_blocked);
+    await query("update profiles set is_blocked = ? where user_id = ? or id = ?", [isBlocked, userId, userId]);
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.delete("/api/admin/users/:id", authRequired, adminRequired, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (userId === req.user.id) return res.status(400).json({ error: "Voce nao pode excluir a si proprio" });
+    await query("delete from users where id = ?", [userId]);
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+const adminConfigTables = {
+  mercado_pago: "mercado_pago_config",
+  evolution: "evolution_api_config",
+  openai: "openai_config",
+};
+
+app.get("/api/admin/config/:name", authRequired, adminRequired, async (req, res) => {
+  try {
+    const table = adminConfigTables[req.params.name];
+    if (!table) return res.status(404).json({ error: "Configuracao nao encontrada" });
+    const rows = await query(`select * from ${table} order by created_at desc limit 1`);
+    res.json({ data: rows[0] ? normalizeRow(rows[0]) : null, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.put("/api/admin/config/:name", authRequired, adminRequired, async (req, res) => {
+  try {
+    const table = adminConfigTables[req.params.name];
+    if (!table) return res.status(404).json({ error: "Configuracao nao encontrada" });
+    const rows = await query(`select id from ${table} order by created_at desc limit 1`);
+    const id = req.body?.id || rows[0]?.id || uuidv4();
+    let payload;
+
+    if (req.params.name === "mercado_pago") {
+      payload = pickAllowedColumns(table, {
+        id,
+        access_token: req.body?.access_token || null,
+        public_key: req.body?.public_key || null,
+        webhook_secret: req.body?.webhook_secret || null,
+        is_active: boolValue(req.body?.is_active ?? true),
+      });
+    } else if (req.params.name === "evolution") {
+      payload = pickAllowedColumns(table, {
+        id,
+        api_url: req.body?.api_url || null,
+        api_key: req.body?.api_key || null,
+        instance_name: req.body?.instance_name || null,
+      });
+    } else {
+      payload = pickAllowedColumns(table, {
+        id,
+        api_key: req.body?.api_key || null,
+        model: req.body?.model || "gpt-4o-mini",
+      });
+    }
+
+    const columns = Object.keys(payload);
+    await query(
+      `insert into ${table} (${columns.join(", ")}) values (${columns.map(() => "?").join(", ")})
+       on duplicate key update ${columns.filter((column) => column !== "id").map((column) => `${column} = values(${column})`).join(", ")}`,
+      columns.map((column) => payload[column]),
+    );
+    const saved = await query(`select * from ${table} where id = ? limit 1`, [id]);
+    res.json({ data: saved[0] ? normalizeRow(saved[0]) : true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/admin/config/:name/test", authRequired, adminRequired, async (req, res) => {
+  try {
+    if (req.params.name === "openai") {
+      const apiKey = req.body?.api_key;
+      if (!apiKey) return res.status(400).json({ error: "Informe a chave da OpenAI" });
+      const response = await fetch("https://api.openai.com/v1/models", {
+        headers: { authorization: `Bearer ${apiKey}` },
+      });
+      if (!response.ok) return res.status(400).json({ error: "Chave OpenAI invalida ou sem acesso" });
+      return res.json({ data: { success: true, message: "Conexao OpenAI estabelecida com sucesso" }, error: null });
+    }
+
+    if (req.params.name === "evolution") {
+      const apiUrl = String(req.body?.api_url || "").replace(/\/+$/, "");
+      const apiKey = req.body?.api_key;
+      if (!apiUrl || !apiKey) return res.status(400).json({ error: "Informe URL e API Key da Evolution" });
+      const response = await fetch(`${apiUrl}/instance/fetchInstances`, {
+        headers: { apikey: apiKey },
+      });
+      if (!response.ok) return res.status(400).json({ error: "Nao foi possivel conectar na Evolution API" });
+      return res.json({ data: { success: true, message: "Conexao Evolution estabelecida com sucesso" }, error: null });
+    }
+
+    res.json({ data: { success: true, message: "Configuracao salva" }, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.get("/api/admin/payments", authRequired, adminRequired, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize || 10)));
+    const countRows = await query("select count(*) as count from payments");
+    const rows = await query(
+      `select
+         pay.*,
+         u.email as user_email,
+         coalesce(p.full_name, p.name, u.name) as user_name
+       from payments pay
+       left join users u on u.id = pay.user_id
+       left join profiles p on p.id = (
+         select p2.id
+           from profiles p2
+          where p2.user_id = pay.user_id or p2.id = pay.user_id
+          order by p2.updated_at desc, p2.created_at desc
+          limit 1
+       )
+       order by pay.created_at desc
+       limit ? offset ?`,
+      [pageSize, (page - 1) * pageSize],
+    );
+    res.json({
+      data: {
+        data: rows.map((row) => {
+          const normalized = normalizeRow(row);
+          return {
+            ...normalized,
+            profiles: {
+              full_name: normalized.user_name,
+              email: normalized.user_email,
+            },
+          };
+        }),
+        count: Number(countRows[0]?.count || 0),
+      },
+      error: null,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.patch("/api/admin/payments/:id/status", authRequired, adminRequired, async (req, res) => {
+  try {
+    await query("update payments set status = ? where id = ?", [req.body?.status || "pending", req.params.id]);
+    res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.delete("/api/admin/payments", authRequired, adminRequired, async (_req, res) => {
+  try {
+    await query("delete from payments");
     res.json({ data: true, error: null });
   } catch (error) {
     handleError(res, error);
