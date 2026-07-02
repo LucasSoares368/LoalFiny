@@ -362,6 +362,8 @@ create table if not exists payments (
   br_code text null,
   mercadopago_payment_id varchar(255) null,
   mercadopago_preference_id varchar(255) null,
+  gateway varchar(40) not null default 'mercadopago',
+  provider_payment_id varchar(255) null,
   paid_at datetime null,
   expires_at datetime null,
   created_at timestamp not null default current_timestamp,
@@ -401,6 +403,16 @@ create table if not exists mercado_pago_config (
   id char(36) primary key,
   access_token text null,
   public_key text null,
+  webhook_secret text null,
+  is_active boolean not null default false,
+  created_at timestamp not null default current_timestamp,
+  updated_at timestamp not null default current_timestamp on update current_timestamp
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
+
+create table if not exists pushinpay_config (
+  id char(36) primary key,
+  api_key text null,
+  api_url text null,
   webhook_secret text null,
   is_active boolean not null default false,
   created_at timestamp not null default current_timestamp,

@@ -56,6 +56,19 @@ export function PaymentModal({
     if (!pixData?.payment_id) return;
 
     try {
+      const { data: syncData } = await supabase.functions.invoke("check-payment-status", {
+        body: { paymentId: pixData.payment_id },
+      });
+      if (syncData?.status) {
+        setStatus(syncData.status);
+        if (syncData.status === 'completed') {
+          stopPolling();
+          toast.success("Pagamento aprovado!");
+          setTimeout(onSuccess, 2000);
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from("payments")
         .select("status")

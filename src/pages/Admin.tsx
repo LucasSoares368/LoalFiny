@@ -29,6 +29,7 @@ import {
   Sparkles,
   Bot,
   CreditCard,
+  QrCode,
   DollarSign,
   AlertTriangle
 } from "lucide-react";
@@ -180,6 +181,15 @@ const Admin = () => {
     is_active: true
   });
   const [savingMercadoPago, setSavingMercadoPago] = useState(false);
+  const [pushinPayConfig, setPushinPayConfig] = useState({
+    id: "",
+    api_url: "https://api.pushinpay.com.br/api",
+    api_key: "",
+    webhook_secret: "",
+    is_active: false,
+  });
+  const [savingPushinPay, setSavingPushinPay] = useState(false);
+  const [testingPushinPay, setTestingPushinPay] = useState(false);
 
   const [fullPlans, setFullPlans] = useState<any[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
@@ -207,6 +217,7 @@ const Admin = () => {
       loadEvolutionConfig();
       loadOpenAiConfig();
       loadMercadoPagoConfig();
+      loadPushinPayConfig();
       loadFullPlans();
       loadPayments();
     }
@@ -278,6 +289,46 @@ const Admin = () => {
       toast.error("Erro ao salvar configuração: " + error.message);
     } finally {
       setSavingMercadoPago(false);
+    }
+  };
+
+  const loadPushinPayConfig = async () => {
+    try {
+      const data = await adminApi("/admin/config/pushinpay");
+      if (data) setPushinPayConfig({ ...pushinPayConfig, ...data });
+    } catch (error) {
+      console.error("Error loading PushinPay config:", error);
+    }
+  };
+
+  const handleSavePushinPayConfig = async () => {
+    setSavingPushinPay(true);
+    try {
+      const data = await adminApi("/admin/config/pushinpay", {
+        method: "PUT",
+        body: JSON.stringify(pushinPayConfig),
+      });
+      if (data) setPushinPayConfig({ ...pushinPayConfig, ...data });
+      toast.success("Configuração da PushinPay salva com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao salvar PushinPay: " + error.message);
+    } finally {
+      setSavingPushinPay(false);
+    }
+  };
+
+  const handleTestPushinPayConfig = async () => {
+    setTestingPushinPay(true);
+    try {
+      const data = await adminApi("/admin/config/pushinpay/test", {
+        method: "POST",
+        body: JSON.stringify(pushinPayConfig),
+      });
+      toast.success(data.message || "PushinPay pronta para gerar PIX");
+    } catch (error: any) {
+      toast.error("Erro ao testar PushinPay: " + error.message);
+    } finally {
+      setTestingPushinPay(false);
     }
   };
 
@@ -784,7 +835,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="payments" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Mercado Pago Config Card */}
               <Card className={adminCardClass}>
                 <CardHeader>
@@ -843,6 +894,73 @@ const Admin = () => {
                 </CardContent>
               </Card>
 
+              <Card className={adminCardClass}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="h-5 w-5 text-primary" />
+                    Configuração PushinPay
+                  </CardTitle>
+                  <CardDescription>
+                    Configure o PIX da PushinPay. Quando ativo, ele será priorizado no checkout.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>API URL</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className={`${adminInputClass} pl-10`}
+                        value={pushinPayConfig.api_url}
+                        onChange={(e) => setPushinPayConfig({ ...pushinPayConfig, api_url: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Token de Integração</Label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        placeholder="Token PushinPay"
+                        className={`${adminInputClass} pl-10`}
+                        value={pushinPayConfig.api_key}
+                        onChange={(e) => setPushinPayConfig({ ...pushinPayConfig, api_key: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
+                    <div>
+                      <Label>Usar PushinPay no PIX</Label>
+                      <p className="text-xs text-muted-foreground">Se ativo, o checkout prioriza PushinPay.</p>
+                    </div>
+                    <Switch
+                      checked={!!pushinPayConfig.is_active}
+                      onCheckedChange={(checked) => setPushinPayConfig({ ...pushinPayConfig, is_active: checked })}
+                    />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      variant="outline"
+                      className={adminButtonClass}
+                      onClick={handleTestPushinPayConfig}
+                      disabled={testingPushinPay || !pushinPayConfig.api_key}
+                    >
+                      {testingPushinPay ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                      Testar
+                    </Button>
+                    <Button
+                      className={adminButtonClass}
+                      onClick={handleSavePushinPayConfig}
+                      disabled={savingPushinPay}
+                    >
+                      {savingPushinPay ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Salvar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Summary / Status Card */}
               <Card className={adminCardClass}>
                 <CardHeader>
@@ -864,6 +982,23 @@ const Admin = () => {
                           <p className="text-sm font-medium">Mercado Pago</p>
                           <p className="text-xs text-muted-foreground">
                             {mercadoPagoConfig.access_token ? "Configurado e Ativo" : "Pendente"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl bg-muted/50 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${pushinPayConfig.api_key && pushinPayConfig.is_active ? 'bg-green-100' : 'bg-red-100'}`}>
+                          {pushinPayConfig.api_key && pushinPayConfig.is_active ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">PushinPay</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pushinPayConfig.api_key && pushinPayConfig.is_active ? "Configurado e Ativo" : "Pendente ou Inativo"}
                           </p>
                         </div>
                       </div>

@@ -237,6 +237,21 @@ export const supabase = {
     return new QueryBuilder(String(_table));
   },
 
+  channel(_name: string) {
+    return {
+      on() {
+        return this;
+      },
+      subscribe() {
+        return this;
+      },
+    };
+  },
+
+  removeChannel(_channel: unknown) {
+    return Promise.resolve("ok");
+  },
+
   rpc(name: string, params?: Record<string, unknown>) {
     return apiFetch(`/rpc/${name}`, {
       method: "POST",

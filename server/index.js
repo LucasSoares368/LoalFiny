@@ -85,6 +85,21 @@ async function ensureColumn(tableName, columnName, definition) {
   }
 }
 
+async function ensureTable(tableName, createSql) {
+  const rows = await query(
+    `select table_name
+       from information_schema.tables
+      where table_schema = database()
+        and table_name = ?
+      limit 1`,
+    [tableName],
+  );
+
+  if (!rows.length) {
+    await query(createSql);
+  }
+}
+
 async function ensureBasePlans() {
   const basePlans = [
     {
@@ -203,6 +218,17 @@ async function ensureBasePlans() {
 
 async function runMigrations() {
   await runSqlFileIfExists(path.join(__dirname, "..", "database", "mysql", "localfiny_2_0.sql"));
+  await ensureTable("pushinpay_config", `
+    create table pushinpay_config (
+      id char(36) primary key,
+      api_key text null,
+      api_url text null,
+      webhook_secret text null,
+      is_active boolean not null default false,
+      created_at timestamp not null default current_timestamp,
+      updated_at timestamp not null default current_timestamp on update current_timestamp
+    ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci
+  `);
   await ensureColumn("transactions", "payment_method", "varchar(50) null after bank_id");
   await ensureColumn("debt_payments", "bank_id", "char(36) null after debt_id");
   await ensureColumn("debt_payments", "transaction_id", "char(36) null after bank_id");
@@ -217,6 +243,8 @@ async function runMigrations() {
   await ensureColumn("plans", "ai_enabled", "boolean not null default false after monthly_planning_enabled");
   await ensureColumn("plans", "import_enabled", "boolean not null default false after ai_enabled");
   await ensureColumn("plans", "is_active", "boolean not null default true after features");
+  await ensureColumn("payments", "gateway", "varchar(40) not null default 'mercadopago' after mercadopago_preference_id");
+  await ensureColumn("payments", "provider_payment_id", "varchar(255) null after gateway");
   await ensureBasePlans();
 }
 
@@ -482,6 +510,237 @@ function centsValue(value) {
 function intValue(value, fallback = 0) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizePaymentStatus(status) {
+  const value = String(status || "").toLowerCase();
+  if (["paid", "approved", "completed", "confirmed", "success", "succeeded"].includes(value)) return "completed";
+  if (["failed", "canceled", "cancelled", "refused", "rejected"].includes(value)) return "failed";
+  if (["expired"].includes(value)) return "expired";
+  if (["processing", "in_process"].includes(value)) return "processing";
+  return "pending";
+}
+
+function getPlanAmount(plan, billingPeriod) {
+  const period = billingPeriod === "yearly" ? "yearly" : "monthly";
+  const amount = period === "yearly" ? Number(plan.price_yearly || 0) : Number(plan.price_monthly || 0);
+  return { amount: Math.max(0, Math.round(amount)), billingPeriod: period };
+}
+
+function buildWebhookUrl(pathName) {
+  return `${APP_BASE_URL.replace(/\/+$/, "")}${pathName}`;
+}
+
+async function activatePaymentSubscription(paymentId) {
+  const rows = await query(
+    `select pay.*, p.plan_type
+       from payments pay
+       left join plans p on p.id = pay.plan_id
+      where pay.id = ?
+      limit 1`,
+    [paymentId],
+  );
+  const payment = rows[0];
+  if (!payment || payment.status === "completed") return payment;
+
+  const periodEnd = new Date(Date.now() + (payment.billing_period === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000);
+  const subRows = await query("select id from subscriptions where user_id = ? order by updated_at desc, created_at desc limit 1", [payment.user_id]);
+  let subscriptionId = subRows[0]?.id;
+
+  if (subscriptionId) {
+    await query(
+      `update subscriptions
+          set plan_id = ?,
+              status = 'active',
+              billing_period = ?,
+              current_period_start = now(),
+              current_period_end = ?,
+              canceled_at = null
+        where id = ?`,
+      [payment.plan_id, payment.billing_period || "monthly", periodEnd, subscriptionId],
+    );
+  } else {
+    subscriptionId = uuidv4();
+    await query(
+      `insert into subscriptions
+        (id, user_id, plan_id, status, billing_period, current_period_start, current_period_end)
+       values (?, ?, ?, 'active', ?, now(), ?)`,
+      [subscriptionId, payment.user_id, payment.plan_id, payment.billing_period || "monthly", periodEnd],
+    );
+  }
+
+  await query(
+    "update payments set status = 'completed', paid_at = coalesce(paid_at, now()), subscription_id = ? where id = ?",
+    [subscriptionId, paymentId],
+  );
+
+  return { ...payment, status: "completed", subscription_id: subscriptionId };
+}
+
+async function updatePaymentStatusFromProvider(payment, providerStatus) {
+  const status = normalizePaymentStatus(providerStatus);
+  if (status === "completed") {
+    return activatePaymentSubscription(payment.id);
+  }
+  if (status !== payment.status) {
+    await query("update payments set status = ? where id = ?", [status, payment.id]);
+  }
+  return { ...payment, status };
+}
+
+async function createPushinPayPix({ userId, plan, amount, billingPeriod }) {
+  const configRows = await query("select * from pushinpay_config where is_active = true order by updated_at desc, created_at desc limit 1").catch(() => []);
+  const config = configRows[0];
+  if (!config?.api_key) throw new Error("PushinPay nao configurado");
+
+  const apiUrl = String(config.api_url || "https://api.pushinpay.com.br/api").replace(/\/+$/, "");
+  const response = await fetch(`${apiUrl}/pix/cashIn`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.api_key}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      value: amount,
+      webhook_url: buildWebhookUrl("/api/webhooks/pushinpay"),
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.message || payload.error || "Erro ao gerar PIX na PushinPay");
+  }
+
+  const providerPaymentId = String(payload.id || payload.transaction_id || payload.payment_id || "");
+  if (!providerPaymentId) throw new Error("PushinPay nao retornou o ID da transacao");
+
+  const qrCode = payload.qr_code || payload.copy_paste || payload.pix_code || payload.br_code || "";
+  const qrCodeBase64 = String(payload.qr_code_base64 || payload.qrcode_base64 || "").replace(/^data:image\/\w+;base64,/, "");
+  const paymentId = uuidv4();
+  await query(
+    `insert into payments
+      (id, user_id, plan_id, amount, status, billing_period, payment_method, payment_link, qr_code, qr_code_base64,
+       br_code, mercadopago_payment_id, provider_payment_id, gateway, expires_at)
+     values (?, ?, ?, ?, 'pending', ?, 'pix', ?, ?, ?, ?, ?, ?, 'pushinpay', ?)`,
+    [
+      paymentId,
+      userId,
+      plan.id,
+      amount,
+      billingPeriod,
+      payload.payment_link || payload.ticket_url || null,
+      qrCode,
+      qrCodeBase64,
+      qrCode,
+      providerPaymentId,
+      providerPaymentId,
+      new Date(Date.now() + 15 * 60 * 1000),
+    ],
+  );
+
+  return {
+    paymentId,
+    providerPaymentId,
+    pix: {
+      qr_code: qrCode,
+      qr_code_base64: qrCodeBase64,
+      ticket_url: payload.payment_link || payload.ticket_url || "",
+    },
+  };
+}
+
+async function getPushinPayStatus(providerPaymentId) {
+  const configRows = await query("select * from pushinpay_config where is_active = true order by updated_at desc, created_at desc limit 1").catch(() => []);
+  const config = configRows[0];
+  if (!config?.api_key) throw new Error("PushinPay nao configurado");
+
+  const apiUrl = String(config.api_url || "https://api.pushinpay.com.br/api").replace(/\/+$/, "");
+  const response = await fetch(`${apiUrl}/transaction/${providerPaymentId}`, {
+    headers: {
+      Authorization: `Bearer ${config.api_key}`,
+      Accept: "application/json",
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || payload.error || "Erro ao consultar pagamento na PushinPay");
+  return payload.status || payload.situation || payload.payment_status;
+}
+
+async function createMercadoPagoPix({ user, plan, amount, billingPeriod }) {
+  const configRows = await query("select * from mercado_pago_config where is_active = true order by updated_at desc, created_at desc limit 1").catch(() => []);
+  const config = configRows[0];
+  if (!config?.access_token) throw new Error("Mercado Pago nao configurado");
+
+  const amountBRL = Number((amount / 100).toFixed(2));
+  const response = await fetch("https://api.mercadopago.com/v1/payments", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.access_token}`,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": uuidv4(),
+    },
+    body: JSON.stringify({
+      transaction_amount: amountBRL,
+      description: `LocalFiny - Plano ${plan.name}`,
+      payment_method_id: "pix",
+      notification_url: buildWebhookUrl("/api/webhooks/mercadopago"),
+      payer: {
+        email: user.email,
+        first_name: user.name || user.email?.split("@")[0] || "Cliente",
+      },
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || payload.error || "Erro ao gerar PIX no Mercado Pago");
+
+  const transactionData = payload.point_of_interaction?.transaction_data || {};
+  const providerPaymentId = String(payload.id || "");
+  if (!providerPaymentId) throw new Error("Mercado Pago nao retornou o ID do pagamento");
+
+  const paymentId = uuidv4();
+  await query(
+    `insert into payments
+      (id, user_id, plan_id, amount, status, billing_period, payment_method, payment_link, qr_code, qr_code_base64,
+       br_code, mercadopago_payment_id, provider_payment_id, gateway, expires_at)
+     values (?, ?, ?, ?, 'pending', ?, 'pix', ?, ?, ?, ?, ?, ?, 'mercadopago', ?)`,
+    [
+      paymentId,
+      user.id,
+      plan.id,
+      amount,
+      billingPeriod,
+      transactionData.ticket_url || null,
+      transactionData.qr_code || "",
+      String(transactionData.qr_code_base64 || "").replace(/^data:image\/\w+;base64,/, ""),
+      transactionData.qr_code || "",
+      providerPaymentId,
+      providerPaymentId,
+      new Date(Date.now() + 15 * 60 * 1000),
+    ],
+  );
+
+  return {
+    paymentId,
+    providerPaymentId,
+    pix: {
+      qr_code: transactionData.qr_code || "",
+      qr_code_base64: String(transactionData.qr_code_base64 || "").replace(/^data:image\/\w+;base64,/, ""),
+      ticket_url: transactionData.ticket_url || "",
+    },
+  };
+}
+
+async function getMercadoPagoStatus(providerPaymentId) {
+  const configRows = await query("select * from mercado_pago_config where is_active = true order by updated_at desc, created_at desc limit 1").catch(() => []);
+  const config = configRows[0];
+  if (!config?.access_token) throw new Error("Mercado Pago nao configurado");
+
+  const response = await fetch(`https://api.mercadopago.com/v1/payments/${providerPaymentId}`, {
+    headers: { Authorization: `Bearer ${config.access_token}` },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || payload.error || "Erro ao consultar Mercado Pago");
+  return payload.status;
 }
 
 function buildWhere(table, filters, userId, params) {
@@ -1211,6 +1470,7 @@ app.delete("/api/admin/users/:id", authRequired, adminRequired, async (req, res)
 
 const adminConfigTables = {
   mercado_pago: "mercado_pago_config",
+  pushinpay: "pushinpay_config",
   evolution: "evolution_api_config",
   openai: "openai_config",
 };
@@ -1239,6 +1499,14 @@ app.put("/api/admin/config/:name", authRequired, adminRequired, async (req, res)
         id,
         access_token: req.body?.access_token || null,
         public_key: req.body?.public_key || null,
+        webhook_secret: req.body?.webhook_secret || null,
+        is_active: boolValue(req.body?.is_active ?? true),
+      });
+    } else if (req.params.name === "pushinpay") {
+      payload = pickAllowedColumns(table, {
+        id,
+        api_key: req.body?.api_key || null,
+        api_url: req.body?.api_url || "https://api.pushinpay.com.br/api",
         webhook_secret: req.body?.webhook_secret || null,
         is_active: boolValue(req.body?.is_active ?? true),
       });
@@ -1291,6 +1559,17 @@ app.post("/api/admin/config/:name/test", authRequired, adminRequired, async (req
       });
       if (!response.ok) return res.status(400).json({ error: "Nao foi possivel conectar na Evolution API" });
       return res.json({ data: { success: true, message: "Conexao Evolution estabelecida com sucesso" }, error: null });
+    }
+
+    if (req.params.name === "pushinpay") {
+      const apiUrl = String(req.body?.api_url || "https://api.pushinpay.com.br/api").replace(/\/+$/, "");
+      const apiKey = req.body?.api_key;
+      if (!apiKey) return res.status(400).json({ error: "Informe o token da PushinPay" });
+      const response = await fetch(`${apiUrl}/transaction/test`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      }).catch((error) => ({ ok: false, status: 0, error }));
+      if (response.status === 401 || response.status === 403) return res.status(400).json({ error: "Token PushinPay invalido ou sem acesso" });
+      return res.json({ data: { success: true, message: "Token PushinPay salvo para uso em cobrancas PIX" }, error: null });
     }
 
     res.json({ data: { success: true, message: "Configuracao salva" }, error: null });
@@ -1356,6 +1635,42 @@ app.delete("/api/admin/payments", authRequired, adminRequired, async (_req, res)
   try {
     await query("delete from payments");
     res.json({ data: true, error: null });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/webhooks/pushinpay", async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const providerPaymentId = String(payload.id || payload.transaction_id || payload.payment_id || payload.external_id || "");
+    const status = payload.status || payload.situation || payload.payment_status;
+    if (!providerPaymentId) return res.json({ ok: true });
+
+    const rows = await query(
+      "select * from payments where provider_payment_id = ? or mercadopago_payment_id = ? limit 1",
+      [providerPaymentId, providerPaymentId],
+    );
+    if (rows[0]) await updatePaymentStatusFromProvider(rows[0], status);
+    res.json({ ok: true });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.post("/api/webhooks/mercadopago", async (req, res) => {
+  try {
+    const paymentId = String(req.body?.data?.id || req.body?.id || req.query?.["data.id"] || "");
+    if (!paymentId) return res.json({ ok: true });
+    const rows = await query(
+      "select * from payments where provider_payment_id = ? or mercadopago_payment_id = ? limit 1",
+      [paymentId, paymentId],
+    );
+    if (rows[0]) {
+      const status = await getMercadoPagoStatus(paymentId).catch(() => req.body?.status);
+      await updatePaymentStatusFromProvider(rows[0], status);
+    }
+    res.json({ ok: true });
   } catch (error) {
     handleError(res, error);
   }
@@ -1448,6 +1763,62 @@ app.post("/api/functions/:name", optionalAuth, async (req, res) => {
 
     if (name === "admin-settings") return adminSettingsHandler(req, res);
 
+    if (name === "create-mercadopago-checkout") {
+      if (!req.user) return res.status(401).json({ error: "Sessao expirada" });
+      const { planId, billingPeriod = "monthly", gateway } = req.body || {};
+      const planRows = await query("select * from plans where id = ? and is_active = true limit 1", [planId]);
+      const plan = planRows[0];
+      if (!plan) return res.status(404).json({ error: "Plano nao encontrado" });
+
+      const { amount, billingPeriod: normalizedPeriod } = getPlanAmount(plan, billingPeriod);
+      if (amount <= 0) return res.status(400).json({ error: "Plano gratuito nao gera pagamento" });
+
+      const pushinRows = await query("select id from pushinpay_config where is_active = true and api_key is not null limit 1").catch(() => []);
+      const preferredGateway = gateway === "mercadopago" || gateway === "pushinpay"
+        ? gateway
+        : pushinRows.length
+          ? "pushinpay"
+          : "mercadopago";
+
+      const result = preferredGateway === "pushinpay"
+        ? await createPushinPayPix({ userId: req.user.id, plan, amount, billingPeriod: normalizedPeriod })
+        : await createMercadoPagoPix({ user: req.user, plan, amount, billingPeriod: normalizedPeriod });
+
+      return res.json({
+        data: {
+          success: true,
+          gateway: preferredGateway,
+          payment_id: result.providerPaymentId,
+          local_payment_id: result.paymentId,
+          pix: result.pix,
+        },
+        error: null,
+      });
+    }
+
+    if (name === "check-payment-status") {
+      if (!req.user) return res.status(401).json({ error: "Sessao expirada" });
+      const providerPaymentId = String(req.body?.paymentId || req.body?.payment_id || "");
+      if (!providerPaymentId) return res.status(400).json({ error: "Pagamento nao informado" });
+
+      const rows = await query(
+        "select * from payments where provider_payment_id = ? or mercadopago_payment_id = ? limit 1",
+        [providerPaymentId, providerPaymentId],
+      );
+      const payment = rows[0];
+      if (!payment) return res.status(404).json({ error: "Pagamento nao encontrado" });
+      if (payment.user_id !== req.user.id && !isAdminUser(req.user)) return res.status(403).json({ error: "Acesso negado" });
+
+      let providerStatus = payment.status;
+      if (payment.gateway === "pushinpay") {
+        providerStatus = await getPushinPayStatus(payment.provider_payment_id || payment.mercadopago_payment_id).catch(() => payment.status);
+      } else if (payment.gateway === "mercadopago") {
+        providerStatus = await getMercadoPagoStatus(payment.provider_payment_id || payment.mercadopago_payment_id).catch(() => payment.status);
+      }
+      const updated = await updatePaymentStatusFromProvider(payment, providerStatus);
+      return res.json({ data: { success: true, status: updated.status || payment.status }, error: null });
+    }
+
     if (name === "ai-chat") {
       return res.json({
         data: {
@@ -1458,7 +1829,7 @@ app.post("/api/functions/:name", optionalAuth, async (req, res) => {
       });
     }
 
-    if (["openai-config", "evolution-api", "send-whatsapp", "create-mercadopago-checkout", "process-transaction-image", "check-achievements"].includes(name)) {
+    if (["openai-config", "evolution-api", "send-whatsapp", "process-transaction-image", "check-achievements"].includes(name)) {
       return res.json({ data: { success: false, message: "Integracao ainda nao configurada no MySQL" }, error: null });
     }
 

@@ -99,10 +99,11 @@ export const TABLE_COLUMNS = {
   mercado_pago_config: ["access_token", "created_at", "id", "is_active", "public_key", "updated_at", "webhook_secret"],
   notes: ["color", "content", "created_at", "id", "is_pinned", "title", "updated_at", "user_id"],
   openai_config: ["api_key", "created_at", "id", "model", "updated_at"],
+  pushinpay_config: ["api_key", "api_url", "created_at", "id", "is_active", "updated_at", "webhook_secret"],
   payments: [
     "amount", "billing_period", "br_code", "created_at", "expires_at", "id", "mercadopago_payment_id",
-    "mercadopago_preference_id", "paid_at", "payment_link", "payment_method", "plan_id", "qr_code", "qr_code_base64",
-    "status", "subscription_id", "updated_at", "user_id",
+    "mercadopago_preference_id", "gateway", "paid_at", "payment_link", "payment_method", "plan_id", "provider_payment_id",
+    "qr_code", "qr_code_base64", "status", "subscription_id", "updated_at", "user_id",
   ],
   plans: [
     "advanced_dashboard_enabled", "annual_projection_enabled", "business_profile_enabled", "cashflow_projection_enabled",
