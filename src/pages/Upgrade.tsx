@@ -34,6 +34,14 @@ interface Plan {
   features: string[];
 }
 
+const planOrder = (planType: string) => {
+  const normalized = planType === "free" ? "starter" : planType === "pro_plus" ? "business" : planType;
+  if (normalized === "starter") return 1;
+  if (normalized === "pro") return 2;
+  if (normalized === "business") return 3;
+  return 9;
+};
+
 export default function Upgrade() {
   const navigate = useNavigate();
   const { plan: currentPlan, loading: planLoading } = useUserPlan();
@@ -77,7 +85,7 @@ export default function Upgrade() {
             : []
       }));
       
-      setPlans(parsedPlans as Plan[]);
+      setPlans((parsedPlans as Plan[]).sort((a, b) => planOrder(a.plan_type) - planOrder(b.plan_type)));
     } catch (error) {
       console.error("Error loading plans:", error);
       toast.error("Erro ao carregar planos");

@@ -1038,7 +1038,20 @@ app.get("/api/admin/users", authRequired, adminRequired, async (_req, res) => {
 
 app.get("/api/admin/plans", authRequired, adminRequired, async (_req, res) => {
   try {
-    const rows = await query("select * from plans order by price_monthly asc, created_at asc");
+    const rows = await query(`
+      select *
+        from plans
+       order by case plan_type
+          when 'starter' then 1
+          when 'free' then 1
+          when 'pro' then 2
+          when 'business' then 3
+          when 'pro_plus' then 3
+          else 9
+        end,
+        price_monthly asc,
+        created_at asc
+    `);
     res.json({ data: rows.map(normalizeRow), error: null });
   } catch (error) {
     handleError(res, error);
