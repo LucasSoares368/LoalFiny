@@ -20,6 +20,7 @@ type Filter = {
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 const TOKEN_KEY = "localfiny_session";
+const authListeners = new Set<(_event: string, session: AuthSession | null) => void>();
 
 function getStoredSession(): AuthSession | null {
   try {
@@ -36,6 +37,12 @@ function setStoredSession(session: AuthSession | null) {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+function emitAuthStateChange(event: string, session: AuthSession | null) {
+  authListeners.forEach((callback) => {
+    queueMicrotask(() => callback(event, session));
+  });
 }
 
 function getRecoveryToken() {
@@ -249,11 +256,14 @@ export const supabase = {
   auth: {
     onAuthStateChange(callback: (_event: string, session: AuthSession | null) => void) {
       const session = getStoredSession();
+      authListeners.add(callback);
       queueMicrotask(() => callback(session ? "SIGNED_IN" : "SIGNED_OUT", session));
       return {
         data: {
           subscription: {
-            unsubscribe() {},
+            unsubscribe() {
+              authListeners.delete(callback);
+            },
           },
         },
       };
@@ -292,7 +302,10 @@ export const supabase = {
           telefone: options?.data?.telefone,
         }),
       });
-      if (!error && data?.session) setStoredSession(data.session);
+      if (!error && data?.session) {
+        setStoredSession(data.session);
+        emitAuthStateChange("SIGNED_IN", data.session);
+      }
       return { data, error };
     },
 
@@ -301,12 +314,16 @@ export const supabase = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      if (!error && data?.session) setStoredSession(data.session);
+      if (!error && data?.session) {
+        setStoredSession(data.session);
+        emitAuthStateChange("SIGNED_IN", data.session);
+      }
       return { data, error };
     },
 
     async signOut() {
       setStoredSession(null);
+      emitAuthStateChange("SIGNED_OUT", null);
       return { error: null };
     },
 

@@ -147,6 +147,7 @@ const Auth = () => {
         }
       } else {
         toast.success("Login realizado com sucesso!");
+        navigate("/dashboard", { replace: true });
       }
     } catch (error: any) {
       toast.error("Erro ao fazer login: " + error.message);

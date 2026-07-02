@@ -94,6 +94,10 @@ const RootRoute = () => {
 const App = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        queryClient.clear();
+      }
+
       if (event === 'PASSWORD_RECOVERY') {
         // Redirect will happen via the route handler if we are on the right page,
         // but let's ensure they go to the reset page
